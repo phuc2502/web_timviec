@@ -249,6 +249,8 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 }
 .alert-success { background: var(--primary-light); color: var(--primary-dark); border: 1px solid var(--primary); }
 .alert-danger { background: #FFF2EE; color: var(--danger); border: 1px solid var(--danger); }
+.alert-warning { background: #FFFBE6; color: #8B6914; border: 1px solid var(--warning); }
+.alert-info { background: #E6F7FF; color: #0050B3; border: 1px solid var(--link); }
 
 /* ================== AVATAR ================== */
 .avatar {

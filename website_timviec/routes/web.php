@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Helper: Mock User ─────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ Route::get('/', function () {
 });
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
-Route::get('/login',             fn() => view('user.login'));
+Route::get('/login',             fn() => view('user.login'))->name('login');
 Route::get('/register',          fn() => view('user.register'));
 Route::get('/register/employee', fn() => view('user.tim-register'));
 Route::get('/register/employer', fn() => view('user.employer-register'));
@@ -105,7 +106,7 @@ Route::get('/subscribe', fn() => view('subscription.index'));
 // PROTECTED-LIKE PAGES (dùng dữ liệu giả để xem UI)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Fake auth middleware cho preview
+// Fake auth middleware cho preview (các trang không phải CV)
 Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
 
     // Dashboard
@@ -116,10 +117,8 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
         'totalRevenue' => 5,
     ]));
 
-    // Profile & CV
+    // Profile
     Route::get('/user/profile',    fn() => view('user.profile'));
-    Route::get('/user/cv',         fn() => view('user.cv'));
-    Route::get('/user/cv/create',  fn() => view('user.create-cv'));
 
     // Jobs
     Route::get('/job',         fn() => view('job.index', ['listings' => mockListings(6), 'total' => 6]));
@@ -171,3 +170,22 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
         'listings' => new \Illuminate\Pagination\LengthAwarePaginator(mockListings(4)->all(), 4, 20),
     ]));
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CV BUILDER — Protected routes (middleware thật)
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(['auth', 'verified', 'employee'])->group(function () {
+    // Upload CV
+    Route::get('/user/cv',          [UserController::class, 'cv'])->name('user.cv');
+    Route::post('/user/cv',         [UserController::class, 'updateCv'])->name('user.cv.upload')->middleware('throttle:5,1');
+    Route::get('/user/cv/view',     [UserController::class, 'viewCv'])->name('user.cv.view');
+
+    // Online CV
+    Route::get('/user/cv/create',   [UserController::class, 'createCv'])->name('user.cv.create');
+    Route::post('/user/cv/preview', [UserController::class, 'saveCv'])->name('user.cv.save');
+    Route::get('/user/cv/preview',  [UserController::class, 'showPreview'])->name('user.cv.preview');
+    Route::get('/user/cv/download', [UserController::class, 'downloadPdf'])->name('user.cv.download')->middleware('throttle:10,1');
+    Route::delete('/user/cv/online',[UserController::class, 'deleteOnlineCv'])->name('user.cv.delete');
+});
+

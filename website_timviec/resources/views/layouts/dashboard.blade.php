@@ -128,6 +128,12 @@
     @if(session('error'))
       <div class="alert alert-danger mb-16"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
     @endif
+    @if(session('warning'))
+      <div class="alert alert-warning mb-16"><i class="fas fa-exclamation-triangle"></i> {{ session('warning') }}</div>
+    @endif
+    @if(session('info'))
+      <div class="alert alert-info mb-16"><i class="fas fa-info-circle"></i> {{ session('info') }}</div>
+    @endif
     @yield('content')
   </div>
 </div>

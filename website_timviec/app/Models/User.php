@@ -39,4 +39,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\Listing::class)->withDefault();
     }
+
+    /**
+     * CV online của ứng viên (1-1).
+     */
+    public function cvData()
+    {
+        return $this->hasOne(\App\Models\CvData::class);
+    }
 }

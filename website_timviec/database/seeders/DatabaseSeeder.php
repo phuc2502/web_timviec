@@ -15,11 +15,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Tài khoản Employee kiểm thử
+        User::updateOrCreate(
+            ['email' => 'employee@example.com'],
+            [
+                'name'              => 'Nguyễn Văn A',
+                'password'          => bcrypt('password'),
+                'user_type'         => 'employee',
+                'email_verified_at' => now(),
+                'about'             => 'Lập trình viên Backend với 3 năm kinh nghiệm Laravel, MySQL, Redis.',
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Tài khoản Employer kiểm thử (dùng để test middleware phân quyền)
+        User::updateOrCreate(
+            ['email' => 'employer@example.com'],
+            [
+                'name'              => 'ABC Tech Vietnam',
+                'password'          => bcrypt('password'),
+                'user_type'         => 'employer',
+                'email_verified_at' => now(),
+                'company_name'      => 'ABC Tech Vietnam',
+                'about'             => 'Công ty phần mềm hàng đầu Việt Nam.',
+            ]
+        );
     }
 }
