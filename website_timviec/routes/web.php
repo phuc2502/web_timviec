@@ -29,6 +29,7 @@ function mockListing($id = 1) {
     $user = mockUser('employer');
     return (object)[
         'id' => $id,
+        'user_id' => $user->id,
         'title' => 'Senior PHP / Laravel Developer',
         'slug' => 'senior-php-laravel-developer',
         'description' => "Chúng tôi đang tìm kiếm Senior PHP Developer với kinh nghiệm tối thiểu 3 năm làm việc với Laravel Framework để tham gia nhóm phát triển sản phẩm SaaS của công ty.\n\n- Thiết kế và phát triển API RESTful với Laravel\n- Tối ưu hóa hiệu suất hệ thống và cơ sở dữ liệu\n- Code review và hướng dẫn các thành viên junior",
@@ -59,8 +60,10 @@ function mockListings($n = 6) {
     $types  = ['Full-time', 'Part-time', 'Remote', 'Internship'];
     $list   = [];
     for ($i = 1; $i <= $n; $i++) {
+        $user = mockUser('employer');
         $list[] = (object)[
             'id' => $i,
+            'user_id' => $user->id,
             'title' => $titles[$i - 1] ?? "Vị trí số $i",
             'slug' => 'job-' . $i,
             'address' => $cities[array_rand($cities)],
@@ -69,7 +72,7 @@ function mockListings($n = 6) {
             'feature_image' => null,
             'application_close_date' => now()->addDays(rand(5, 30)),
             'created_at' => now()->subDays(rand(1, 10)),
-            'user' => mockUser('employer'),
+            'user' => $user,
             'users' => collect(array_fill(0, rand(1, 15), null)),
         ];
     }

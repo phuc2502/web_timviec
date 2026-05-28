@@ -146,7 +146,7 @@
 
       {{-- OWNER ACTIONS --}}
       @auth
-        @if(auth()->user()->id === $listing->user_id)
+        @if(auth()->user()->id === ($listing->user_id ?? ($listing->user->id ?? null)))
           <div class="sidebar-card">
             <div class="sidebar-card__title">Quản lý tin đăng</div>
             <div class="sidebar-card__body">
