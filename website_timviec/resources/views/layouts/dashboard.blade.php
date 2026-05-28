@@ -94,6 +94,18 @@
         <a href="{{ url('/messages') }}" class="{{ request()->is('messages*') ? 'active' : '' }}">
           <i class="fas fa-comment-dots fa-fw"></i> Tin nhắn
         </a>
+      @elseif(auth()->user()->user_type === 'admin')
+        <div class="dash-nav__section">Tổng quan</div>
+        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">
+          <i class="fas fa-home fa-fw"></i> Dashboard Admin
+        </a>
+        <div class="dash-nav__section" style="color:#ef4444;"><i class="fas fa-shield-alt"></i> Khu vực quản trị</div>
+        <a href="{{ url('/admin') }}" style="color:#ef4444; font-weight:700;">
+          <i class="fas fa-cog fa-fw"></i> Bảng điều khiển Admin
+        </a>
+        <a href="{{ url('/admin/users') }}" style="color:#ef4444; font-weight:700;">
+          <i class="fas fa-users fa-fw"></i> Quản lý & Phân quyền
+        </a>
       @else
         <div class="dash-nav__section">Của tôi</div>
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">

@@ -37,7 +37,14 @@ class User extends Authenticatable
     // ─── Relationships (trả về collection rỗng khi preview) ────────────────
     public function listings()
     {
-        return $this->hasMany(\App\Models\Listing::class)->withDefault();
+        return $this->hasMany(\App\Models\Listing::class);
+    }
+
+    public function appliedListings()
+    {
+        return $this->belongsToMany(\App\Models\Listing::class, 'listing_user')
+                    ->withPivot(['shortlisted'])
+                    ->withTimestamps();
     }
 
     /**

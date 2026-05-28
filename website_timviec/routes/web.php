@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\AdminController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Helper: Mock User ─────────────────────────────────────────────────────
@@ -109,13 +111,8 @@ Route::get('/subscribe', fn() => view('subscription.index'));
 // Fake auth middleware cho preview (các trang không phải CV)
 Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', fn() => view('dashboard', [
-        'totalJobs' => 12, 'totalApplicants' => 47,
-        'shortlisted' => 8, 'activeJobs' => 9,
-        'recentJobs' => mockListings(4),
-        'totalRevenue' => 5,
-    ]));
+    // Dashboard (Tự rẽ nhánh cho Employee, Employer, Admin)
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile
     Route::get('/user/profile',    fn() => view('user.profile'));
@@ -152,23 +149,22 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
         'messages' => collect([]),
     ]));
 
-    // Admin
-    Route::get('/admin', fn() => view('admin.index', [
-        'totalUsers' => 128, 'totalJobs' => 47,
-        'totalApplications' => 312, 'totalRevenue' => 23,
-        'totalEmployees' => 95, 'totalEmployers' => 33,
-        'recentUsers' => collect([mockUser(), mockUser('employer'), mockUser()]),
-        'recentJobs'  => mockListings(4),
-    ]));
-    Route::get('/admin/users', fn() => view('admin.users', [
-        'users' => new \Illuminate\Pagination\LengthAwarePaginator(
-            collect([mockUser(), mockUser('employer'), mockUser(), mockUser('employer')]),
-            4, 20
-        ),
-    ]));
-    Route::get('/admin/jobs', fn() => view('admin.jobs', [
-        'listings' => new \Illuminate\Pagination\LengthAwarePaginator(mockListings(4)->all(), 4, 20),
-    ]));
+    // Admin Panel (Được điều khiển động từ AdminController)
+    Route::get('/admin', [DashboardController::class, 'index']);
+    
+    // Quản lý phân quyền chức năng
+    Route::get('/admin/users', [AdminController::class, 'users']);
+    Route::post('/admin/users/{id}/role', [AdminController::class, 'updateRole']);
+    Route::post('/admin/users/{id}/plan', [AdminController::class, 'updatePlan']);
+    Route::post('/admin/users/{id}/ban', [AdminController::class, 'toggleBan']);
+    
+    // Quản lý phân quyền dữ liệu
+    Route::get('/admin/permissions', [AdminController::class, 'permissions']);
+    Route::post('/admin/permissions/transfer/{id}', [AdminController::class, 'transferOwnership']);
+    
+    // Quản lý tin tuyển dụng toàn hệ thống
+    Route::get('/admin/jobs', [AdminController::class, 'jobs']);
+    Route::delete('/admin/jobs/{id}', [AdminController::class, 'deleteJob']);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
