@@ -1,7 +1,18 @@
 -- ============================================================
 --  DATABASE SCHEMA — Website Tìm Việc IT
---  Laravel 11 + MySQL
---  Bao gồm: tất cả bảng từ 10 module
+--  Laravel 11 + MySQL 8.0+
+--  Phiên bản: đã sửa lỗi và tối ưu
+-- ============================================================
+--
+--  THAY ĐỔI SO VỚI BẢN GỐC:
+--  [FIX-1] users.status       → ENUM mở rộng + NOT NULL DEFAULT 'unpaid'
+--  [FIX-2] asl.changed_by     → ON DELETE SET NULL (tránh mất log)
+--  [FIX-3] transactions FK    → ON DELETE RESTRICT (bảo toàn lịch sử tài chính)
+--  [FIX-4] listings.roles     → đổi TEXT → JSON + đổi tên rõ hơn
+--  [FIX-5] listings.job_type  → chuẩn hóa ENUM
+--  [FIX-6] conversations.listing_id → cho phép NULL
+--  [FIX-7] users.mail         → đổi tên thành email_notify
+--  [FIX-8] Thêm index billing_ends, is_banned
 -- ============================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -9,7 +20,6 @@ SET NAMES utf8mb4;
 
 -- ============================================================
 -- 1. USERS
---    Module: Auth, User Profile, Payment, Admin
 -- ============================================================
 CREATE TABLE `users` (
     `id`                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -25,29 +35,32 @@ CREATE TABLE `users` (
     `user_type`          ENUM('employee','employer') NOT NULL DEFAULT 'employee',
     `about`              TEXT            NULL,
     `profile_pic`        VARCHAR(255)    NULL,
-    `mail`               TINYINT(1)      NOT NULL DEFAULT 1  COMMENT 'Nhận email thông báo',
+    -- [FIX-7] đổi tên 'mail' → 'email_notify' cho rõ nghĩa
+    `email_notify`       TINYINT(1)      NOT NULL DEFAULT 1  COMMENT 'Nhận email thông báo',
 
     -- CV (employee)
     `resume`             VARCHAR(255)    NULL  COMMENT 'Đường dẫn file CV upload',
 
     -- Profile mở rộng — Employee
     `experience_years`   TINYINT UNSIGNED NULL,
-    `desired_salary`     BIGINT UNSIGNED  NULL,
+    `desired_salary`     INT UNSIGNED    NULL  COMMENT 'Mức lương mong muốn (VNĐ)',
     `location`           VARCHAR(255)    NULL,
 
     -- Profile mở rộng — Employer
     `company_name`       VARCHAR(255)    NULL,
     `company_logo`       VARCHAR(255)    NULL,
     `company_website`    VARCHAR(255)    NULL,
-    `company_size`       VARCHAR(100)    NULL  COMMENT 'VD: 10-50, 50-200, 200+',
+    `company_size`       ENUM('1-9','10-49','50-199','200-499','500+')
+                         NULL  COMMENT 'Quy mô công ty',
 
-    -- Payment & Subscription (Module 8)
-    `user_trial`         DATE            NULL  COMMENT 'Hết hạn dùng thử (1 tuần sau đăng ký)',
-    `status`             ENUM('paid')    NULL  DEFAULT NULL,
+    -- Payment & Subscription
+    `user_trial`         TIMESTAMP       NULL  COMMENT 'Thời điểm hết hạn dùng thử',
+    -- [FIX-1] ENUM mở rộng, mặc định 'unpaid'
+    `status`             ENUM('unpaid','paid','expired') NOT NULL DEFAULT 'unpaid',
     `plan`               ENUM('monthly','yearly') NULL DEFAULT NULL,
     `billing_ends`       DATE            NULL,
 
-    -- Admin (Module 9)
+    -- Admin
     `is_admin`           TINYINT(1)      NOT NULL DEFAULT 0,
     `is_banned`          TINYINT(1)      NOT NULL DEFAULT 0,
     `banned_at`          TIMESTAMP       NULL DEFAULT NULL,
@@ -56,14 +69,16 @@ CREATE TABLE `users` (
     `updated_at`         TIMESTAMP       NULL DEFAULT NULL,
 
     PRIMARY KEY (`id`),
-    INDEX `idx_users_user_type` (`user_type`),
-    INDEX `idx_users_status`    (`status`)
+    INDEX `idx_users_user_type`    (`user_type`),
+    INDEX `idx_users_status`       (`status`),
+    -- [FIX-8] thêm index cho các cột hay dùng filter
+    INDEX `idx_users_billing_ends` (`billing_ends`),
+    INDEX `idx_users_is_banned`    (`is_banned`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ============================================================
 -- 2. SOCIAL ACCOUNTS (OAuth — Socialite)
---    Module: Auth (Google / GitHub)
 -- ============================================================
 CREATE TABLE `social_accounts` (
     `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -83,7 +98,6 @@ CREATE TABLE `social_accounts` (
 
 -- ============================================================
 -- 3. SKILLS
---    Module: Search & Filter, User Profile, Job Posting
 -- ============================================================
 CREATE TABLE `skills` (
     `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -98,7 +112,6 @@ CREATE TABLE `skills` (
 
 -- ============================================================
 -- 4. USER_SKILL (Pivot)
---    Module: User Profile (employee skills)
 -- ============================================================
 CREATE TABLE `user_skill` (
     `user_id`  BIGINT UNSIGNED NOT NULL,
@@ -114,30 +127,34 @@ CREATE TABLE `user_skill` (
 
 -- ============================================================
 -- 5. LISTINGS (Tin tuyển dụng)
---    Module: Job Posting, Search & Filter
 -- ============================================================
 CREATE TABLE `listings` (
-    `id`                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `user_id`               BIGINT UNSIGNED NOT NULL  COMMENT 'Employer đăng bài',
+    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`                 BIGINT UNSIGNED NOT NULL  COMMENT 'Employer đăng bài',
 
-    `title`                 VARCHAR(255)    NOT NULL,
-    `slug`                  VARCHAR(300)    NOT NULL UNIQUE,
-    `predes`                VARCHAR(500)    NULL  COMMENT 'Mô tả ngắn',
-    `description`           LONGTEXT        NOT NULL,
-    `roles`                 TEXT            NOT NULL  COMMENT 'Yêu cầu / quyền lợi',
+    `title`                   VARCHAR(255)    NOT NULL,
+    `slug`                    VARCHAR(300)    NOT NULL UNIQUE,
+    `predes`                  VARCHAR(500)    NULL  COMMENT 'Mô tả ngắn',
+    `description`             LONGTEXT        NOT NULL,
 
-    `job_type`              VARCHAR(100)    NOT NULL  COMMENT 'Full-time, Part-time, Remote...',
-    `address`               VARCHAR(255)    NOT NULL,
-    `salary`                BIGINT UNSIGNED NOT NULL DEFAULT 0  COMMENT '0 = Thỏa thuận',
+    -- [FIX-4] tách roles TEXT → 2 cột JSON rõ ràng hơn
+    `requirements`            JSON            NULL  COMMENT '[{"item": "..."}]  Yêu cầu ứng viên',
+    `benefits`                JSON            NULL  COMMENT '[{"item": "..."}]  Quyền lợi',
 
-    `feature_image`         VARCHAR(255)    NULL,
-    `application_close_date` DATE           NOT NULL,
+    -- [FIX-5] chuẩn hóa job_type thành ENUM
+    `job_type`                ENUM('full-time','part-time','remote','hybrid','freelance','internship')
+                              NOT NULL DEFAULT 'full-time',
 
-    -- Mở rộng (Module 3)
-    `status`                ENUM('open','hidden','closed') NOT NULL DEFAULT 'open',
+    `address`                 VARCHAR(255)    NOT NULL,
+    `salary`                  INT UNSIGNED    NOT NULL DEFAULT 0  COMMENT '0 = Thỏa thuận',
 
-    `created_at`            TIMESTAMP       NULL DEFAULT NULL,
-    `updated_at`            TIMESTAMP       NULL DEFAULT NULL,
+    `feature_image`           VARCHAR(255)    NULL,
+    `application_close_date`  DATE            NOT NULL,
+
+    `status`                  ENUM('open','hidden','closed') NOT NULL DEFAULT 'open',
+
+    `created_at`              TIMESTAMP       NULL DEFAULT NULL,
+    `updated_at`              TIMESTAMP       NULL DEFAULT NULL,
 
     PRIMARY KEY (`id`),
     INDEX `idx_listings_user_id`  (`user_id`),
@@ -145,6 +162,7 @@ CREATE TABLE `listings` (
     INDEX `idx_listings_address`  (`address`),
     INDEX `idx_listings_job_type` (`job_type`),
     INDEX `idx_listings_salary`   (`salary`),
+    INDEX `idx_listings_close_date` (`application_close_date`),
     FULLTEXT INDEX `ft_listings_title_desc` (`title`, `predes`),
     CONSTRAINT `fk_listings_user`
         FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
@@ -153,7 +171,6 @@ CREATE TABLE `listings` (
 
 -- ============================================================
 -- 6. LISTING_SKILL (Pivot)
---    Module: Job Posting, Search & Filter
 -- ============================================================
 CREATE TABLE `listing_skill` (
     `listing_id` BIGINT UNSIGNED NOT NULL,
@@ -169,8 +186,6 @@ CREATE TABLE `listing_skill` (
 
 -- ============================================================
 -- 7. APPLICATIONS
---    Module: Apply & Tracking
---    Bảng riêng thay thế pivot listing_user
 -- ============================================================
 CREATE TABLE `applications` (
     `id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -188,9 +203,9 @@ CREATE TABLE `applications` (
     `updated_at`   TIMESTAMP       NULL DEFAULT NULL,
 
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uq_application` (`listing_id`, `user_id`),
-    INDEX `idx_app_user_id`   (`user_id`),
-    INDEX `idx_app_status`    (`status`),
+    UNIQUE KEY `uq_application`   (`listing_id`, `user_id`),
+    INDEX `idx_app_user_id`       (`user_id`),
+    INDEX `idx_app_status`        (`status`),
     CONSTRAINT `fk_app_listing`
         FOREIGN KEY (`listing_id`) REFERENCES `listings`(`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_app_user`
@@ -199,17 +214,17 @@ CREATE TABLE `applications` (
 
 
 -- ============================================================
--- 7b. APPLICATION_STATUS_LOGS (Timeline lịch sử trạng thái)
---     Module: Apply & Tracking
+-- 7b. APPLICATION_STATUS_LOGS
 -- ============================================================
 CREATE TABLE `application_status_logs` (
     `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `application_id` BIGINT UNSIGNED NOT NULL,
-    `changed_by`     BIGINT UNSIGNED NOT NULL  COMMENT 'user_id người thay đổi (employer/admin)',
+    -- [FIX-2] NULL + SET NULL để tránh mất log khi xóa user
+    `changed_by`     BIGINT UNSIGNED NULL  COMMENT 'user_id người thay đổi (employer/admin)',
 
     `old_status`     ENUM('pending','reviewing','interviewed','accepted','rejected') NULL,
     `new_status`     ENUM('pending','reviewing','interviewed','accepted','rejected') NOT NULL,
-    `note`           VARCHAR(500)    NULL  COMMENT 'Lý do hoặc ghi chú khi đổi trạng thái',
+    `note`           VARCHAR(500)    NULL,
 
     `created_at`     TIMESTAMP       NULL DEFAULT NULL,
 
@@ -218,41 +233,38 @@ CREATE TABLE `application_status_logs` (
     CONSTRAINT `fk_asl_application`
         FOREIGN KEY (`application_id`) REFERENCES `applications`(`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_asl_changed_by`
-        FOREIGN KEY (`changed_by`)     REFERENCES `users`(`id`)        ON DELETE CASCADE
+        FOREIGN KEY (`changed_by`)     REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ============================================================
--- 8. CV_DATA (CV Builder — lưu nội dung form)
---    Module: CV Builder
+-- 8. CV_DATA
 -- ============================================================
 CREATE TABLE `cv_data` (
     `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id`         BIGINT UNSIGNED NOT NULL,
 
-    -- Thông tin cá nhân
     `full_name`       VARCHAR(255)    NULL,
     `phone`           VARCHAR(20)     NULL,
     `email`           VARCHAR(255)    NULL,
     `address`         VARCHAR(255)    NULL,
     `photo_path`      VARCHAR(255)    NULL,
 
-    -- Nội dung CV (lưu JSON hoặc text)
-    `objective`       TEXT            NULL  COMMENT 'Mục tiêu nghề nghiệp',
+    `objective`       TEXT            NULL,
     `education`       JSON            NULL  COMMENT '[{school, degree, year_start, year_end}]',
     `experience`      JSON            NULL  COMMENT '[{company, role, year_start, year_end, desc}]',
     `projects`        JSON            NULL  COMMENT '[{name, tech, url, desc}]',
     `certifications`  JSON            NULL  COMMENT '[{name, issuer, year}]',
-    `skills_text`     TEXT            NULL  COMMENT 'Danh sách kỹ năng dạng text',
+    `skills_text`     TEXT            NULL,
     `languages`       JSON            NULL  COMMENT '[{lang, level}]',
 
-    -- Template được chọn
     `template`        VARCHAR(50)     NOT NULL DEFAULT 'default',
 
     `created_at`      TIMESTAMP       NULL DEFAULT NULL,
     `updated_at`      TIMESTAMP       NULL DEFAULT NULL,
 
     PRIMARY KEY (`id`),
+    -- Giữ UNIQUE: 1 user 1 CV. Nếu sau cần multi-CV thì bỏ constraint này.
     UNIQUE KEY `uq_cv_data_user` (`user_id`),
     CONSTRAINT `fk_cv_data_user`
         FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
@@ -260,43 +272,44 @@ CREATE TABLE `cv_data` (
 
 
 -- ============================================================
--- 9. TRANSACTIONS (Lịch sử thanh toán VNPay)
---    Module: Payment & Subscription, Admin Dashboard
+-- 9. TRANSACTIONS
 -- ============================================================
 CREATE TABLE `transactions` (
-    `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `user_id`         BIGINT UNSIGNED NOT NULL,
+    `id`                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`             BIGINT UNSIGNED NOT NULL,
 
-    `vnp_txn_ref`     VARCHAR(100)    NOT NULL UNIQUE  COMMENT 'Mã giao dịch VNPay',
-    `vnp_order_info`  VARCHAR(255)    NULL,
-    `amount`          BIGINT UNSIGNED NOT NULL  COMMENT 'Số tiền (VNĐ)',
-    `plan`            ENUM('monthly','yearly') NOT NULL,
+    `vnp_txn_ref`         VARCHAR(100)    NOT NULL UNIQUE,
+    `vnp_order_info`      VARCHAR(255)    NULL,
+    `amount`              BIGINT UNSIGNED NOT NULL  COMMENT 'Số tiền (VNĐ)',
+    `plan`                ENUM('monthly','yearly') NOT NULL,
 
-    `status`          ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
-    `vnp_response_code` VARCHAR(10)   NULL  COMMENT 'Mã phản hồi từ VNPay',
-    `vnp_transaction_no` VARCHAR(100) NULL  COMMENT 'Số giao dịch phía VNPay',
-    `paid_at`         TIMESTAMP       NULL DEFAULT NULL,
+    `status`              ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+    `vnp_response_code`   VARCHAR(10)     NULL,
+    `vnp_transaction_no`  VARCHAR(100)    NULL,
+    `paid_at`             TIMESTAMP       NULL DEFAULT NULL,
 
-    `created_at`      TIMESTAMP       NULL DEFAULT NULL,
-    `updated_at`      TIMESTAMP       NULL DEFAULT NULL,
+    `created_at`          TIMESTAMP       NULL DEFAULT NULL,
+    `updated_at`          TIMESTAMP       NULL DEFAULT NULL,
 
     PRIMARY KEY (`id`),
     INDEX `idx_transactions_user_id` (`user_id`),
     INDEX `idx_transactions_status`  (`status`),
+    INDEX `idx_transactions_paid_at` (`paid_at`),
+    -- [FIX-3] RESTRICT: không cho xóa user khi còn lịch sử giao dịch
     CONSTRAINT `fk_transactions_user`
-        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ============================================================
--- 10. CONVERSATIONS (Chat & Messaging)
---     Module: Chat & Messaging
+-- 10. CONVERSATIONS
 -- ============================================================
 CREATE TABLE `conversations` (
     `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `employer_id` BIGINT UNSIGNED NOT NULL,
     `employee_id` BIGINT UNSIGNED NOT NULL,
-    `listing_id`  BIGINT UNSIGNED NOT NULL,
+    -- [FIX-6] listing_id nullable: cho phép nhắn tin không gắn tin tuyển dụng
+    `listing_id`  BIGINT UNSIGNED NULL,
 
     `created_at`  TIMESTAMP       NULL DEFAULT NULL,
     `updated_at`  TIMESTAMP       NULL DEFAULT NULL,
@@ -310,13 +323,12 @@ CREATE TABLE `conversations` (
     CONSTRAINT `fk_conv_employee`
         FOREIGN KEY (`employee_id`) REFERENCES `users`(`id`)    ON DELETE CASCADE,
     CONSTRAINT `fk_conv_listing`
-        FOREIGN KEY (`listing_id`)  REFERENCES `listings`(`id`) ON DELETE CASCADE
+        FOREIGN KEY (`listing_id`)  REFERENCES `listings`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ============================================================
 -- 11. MESSAGES
---     Module: Chat & Messaging
 -- ============================================================
 CREATE TABLE `messages` (
     `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -340,18 +352,17 @@ CREATE TABLE `messages` (
 
 
 -- ============================================================
--- 12. NOTIFICATIONS (DB notifications — Laravel)
---     Module: Notification
+-- 12. NOTIFICATIONS
 -- ============================================================
 CREATE TABLE `notifications` (
-    `id`             CHAR(36)        NOT NULL  COMMENT 'UUID',
-    `type`           VARCHAR(255)    NOT NULL  COMMENT 'Class notification',
-    `notifiable_type` VARCHAR(255)   NOT NULL,
-    `notifiable_id`  BIGINT UNSIGNED NOT NULL,
-    `data`           JSON            NOT NULL,
-    `read_at`        TIMESTAMP       NULL DEFAULT NULL,
-    `created_at`     TIMESTAMP       NULL DEFAULT NULL,
-    `updated_at`     TIMESTAMP       NULL DEFAULT NULL,
+    `id`              CHAR(36)        NOT NULL  COMMENT 'UUID',
+    `type`            VARCHAR(255)    NOT NULL,
+    `notifiable_type` VARCHAR(255)    NOT NULL,
+    `notifiable_id`   BIGINT UNSIGNED NOT NULL,
+    `data`            JSON            NOT NULL,
+    `read_at`         TIMESTAMP       NULL DEFAULT NULL,
+    `created_at`      TIMESTAMP       NULL DEFAULT NULL,
+    `updated_at`      TIMESTAMP       NULL DEFAULT NULL,
 
     PRIMARY KEY (`id`),
     INDEX `idx_notifications_notifiable` (`notifiable_type`, `notifiable_id`)
@@ -359,9 +370,8 @@ CREATE TABLE `notifications` (
 
 
 -- ============================================================
--- 13. BẢNG HỆ THỐNG LARAVEL (giữ nguyên)
+-- 13. BẢNG HỆ THỐNG LARAVEL
 -- ============================================================
-
 CREATE TABLE `password_reset_tokens` (
     `email`      VARCHAR(255) NOT NULL,
     `token`      VARCHAR(255) NOT NULL,
@@ -414,29 +424,6 @@ CREATE TABLE `jobs` (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
--- TÓM TẮT CÁC BẢNG
--- ============================================================
--- Core:
---   users                 → Auth, Profile, Payment, Admin
---   social_accounts       → Auth (Socialite OAuth)
--- Skills:
---   skills                → danh mục kỹ năng
---   user_skill            → skill của ứng viên
---   listing_skill         → skill yêu cầu của tin
--- Jobs:
---   listings              → tin tuyển dụng
---   applications          → đơn ứng tuyển + trạng thái
---   application_status_logs → timeline lịch sử đổi trạng thái
--- CV:
---   cv_data               → nội dung CV Builder
--- Payment:
---   transactions          → lịch sử thanh toán VNPay
--- Chat:
---   conversations         → cuộc hội thoại employer↔employee
---   messages              → tin nhắn
--- Notification:
---   notifications         → thông báo in-app (Laravel DB)
--- System:
---   password_reset_tokens, personal_access_tokens,
---   failed_jobs, jobs
+-- LỆNH CHẠY:
+--   mysql -u root -p ten_database < schema_fixed.sql
 -- ============================================================
