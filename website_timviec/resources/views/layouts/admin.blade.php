@@ -25,6 +25,9 @@
       <a href="{{ url('/admin/users') }}" class="{{ request()->is('admin/users*') ? 'active' : '' }}">
         <i class="fas fa-users fa-fw"></i> Người dùng
       </a>
+      <a href="{{ url('/admin/permissions') }}" class="{{ request()->is('admin/permissions*') ? 'active' : '' }}">
+        <i class="fas fa-shield-alt fa-fw"></i> Phân quyền dữ liệu
+      </a>
       <a href="{{ url('/admin/jobs') }}" class="{{ request()->is('admin/jobs*') ? 'active' : '' }}">
         <i class="fas fa-briefcase fa-fw"></i> Tin tuyển dụng
       </a>

@@ -37,6 +37,21 @@ class User extends Authenticatable
     // ─── Relationships (trả về collection rỗng khi preview) ────────────────
     public function listings()
     {
-        return $this->hasMany(\App\Models\Listing::class)->withDefault();
+        return $this->hasMany(\App\Models\Listing::class);
+    }
+
+    public function appliedListings()
+    {
+        return $this->belongsToMany(\App\Models\Listing::class, 'listing_user')
+                    ->withPivot(['shortlisted'])
+                    ->withTimestamps();
+    }
+
+    /**
+     * CV online của ứng viên (1-1).
+     */
+    public function cvData()
+    {
+        return $this->hasOne(\App\Models\CvData::class);
     }
 }

@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\AdminController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Helper: Mock User ─────────────────────────────────────────────────────
@@ -29,6 +32,7 @@ function mockListing($id = 1) {
     $user = mockUser('employer');
     return (object)[
         'id' => $id,
+        'user_id' => $user->id,
         'title' => 'Senior PHP / Laravel Developer',
         'slug' => 'senior-php-laravel-developer',
         'description' => "Chúng tôi đang tìm kiếm Senior PHP Developer với kinh nghiệm tối thiểu 3 năm làm việc với Laravel Framework để tham gia nhóm phát triển sản phẩm SaaS của công ty.\n\n- Thiết kế và phát triển API RESTful với Laravel\n- Tối ưu hóa hiệu suất hệ thống và cơ sở dữ liệu\n- Code review và hướng dẫn các thành viên junior",
@@ -59,8 +63,10 @@ function mockListings($n = 6) {
     $types  = ['Full-time', 'Part-time', 'Remote', 'Internship'];
     $list   = [];
     for ($i = 1; $i <= $n; $i++) {
+        $user = mockUser('employer');
         $list[] = (object)[
             'id' => $i,
+            'user_id' => $user->id,
             'title' => $titles[$i - 1] ?? "Vị trí số $i",
             'slug' => 'job-' . $i,
             'address' => $cities[array_rand($cities)],
@@ -69,7 +75,7 @@ function mockListings($n = 6) {
             'feature_image' => null,
             'application_close_date' => now()->addDays(rand(5, 30)),
             'created_at' => now()->subDays(rand(1, 10)),
-            'user' => mockUser('employer'),
+            'user' => $user,
             'users' => collect(array_fill(0, rand(1, 15), null)),
         ];
     }
@@ -88,7 +94,7 @@ Route::get('/', function () {
 });
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
-Route::get('/login',             fn() => view('user.login'));
+Route::get('/login',             fn() => view('user.login'))->name('login');
 Route::get('/register',          fn() => view('user.register'));
 Route::get('/register/employee', fn() => view('user.tim-register'));
 Route::get('/register/employer', fn() => view('user.employer-register'));
@@ -102,21 +108,14 @@ Route::get('/subscribe', fn() => view('subscription.index'));
 // PROTECTED-LIKE PAGES (dùng dữ liệu giả để xem UI)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Fake auth middleware cho preview
+// Fake auth middleware cho preview (các trang không phải CV)
 Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', fn() => view('dashboard', [
-        'totalJobs' => 12, 'totalApplicants' => 47,
-        'shortlisted' => 8, 'activeJobs' => 9,
-        'recentJobs' => mockListings(4),
-        'totalRevenue' => 5,
-    ]));
+    // Dashboard (Tự rẽ nhánh cho Employee, Employer, Admin)
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile & CV
+    // Profile
     Route::get('/user/profile',    fn() => view('user.profile'));
-    Route::get('/user/cv',         fn() => view('user.cv'));
-    Route::get('/user/cv/create',  fn() => view('user.create-cv'));
 
     // Jobs
     Route::get('/job',         fn() => view('job.index', ['listings' => mockListings(6), 'total' => 6]));
@@ -150,21 +149,39 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
         'messages' => collect([]),
     ]));
 
-    // Admin
-    Route::get('/admin', fn() => view('admin.index', [
-        'totalUsers' => 128, 'totalJobs' => 47,
-        'totalApplications' => 312, 'totalRevenue' => 23,
-        'totalEmployees' => 95, 'totalEmployers' => 33,
-        'recentUsers' => collect([mockUser(), mockUser('employer'), mockUser()]),
-        'recentJobs'  => mockListings(4),
-    ]));
-    Route::get('/admin/users', fn() => view('admin.users', [
-        'users' => new \Illuminate\Pagination\LengthAwarePaginator(
-            collect([mockUser(), mockUser('employer'), mockUser(), mockUser('employer')]),
-            4, 20
-        ),
-    ]));
-    Route::get('/admin/jobs', fn() => view('admin.jobs', [
-        'listings' => new \Illuminate\Pagination\LengthAwarePaginator(mockListings(4)->all(), 4, 20),
-    ]));
+    // Admin Panel (Được điều khiển động từ AdminController)
+    Route::get('/admin', [DashboardController::class, 'index']);
+    
+    // Quản lý phân quyền chức năng
+    Route::get('/admin/users', [AdminController::class, 'users']);
+    Route::post('/admin/users/{id}/role', [AdminController::class, 'updateRole']);
+    Route::post('/admin/users/{id}/plan', [AdminController::class, 'updatePlan']);
+    Route::post('/admin/users/{id}/ban', [AdminController::class, 'toggleBan']);
+    
+    // Quản lý phân quyền dữ liệu
+    Route::get('/admin/permissions', [AdminController::class, 'permissions']);
+    Route::post('/admin/permissions/transfer/{id}', [AdminController::class, 'transferOwnership']);
+    
+    // Quản lý tin tuyển dụng toàn hệ thống
+    Route::get('/admin/jobs', [AdminController::class, 'jobs']);
+    Route::delete('/admin/jobs/{id}', [AdminController::class, 'deleteJob']);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CV BUILDER — Protected routes (middleware thật)
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(['auth', 'verified', 'employee'])->group(function () {
+    // Upload CV
+    Route::get('/user/cv',          [UserController::class, 'cv'])->name('user.cv');
+    Route::post('/user/cv',         [UserController::class, 'updateCv'])->name('user.cv.upload')->middleware('throttle:5,1');
+    Route::get('/user/cv/view',     [UserController::class, 'viewCv'])->name('user.cv.view');
+
+    // Online CV
+    Route::get('/user/cv/create',   [UserController::class, 'createCv'])->name('user.cv.create');
+    Route::post('/user/cv/preview', [UserController::class, 'saveCv'])->name('user.cv.save');
+    Route::get('/user/cv/preview',  [UserController::class, 'showPreview'])->name('user.cv.preview');
+    Route::get('/user/cv/download', [UserController::class, 'downloadPdf'])->name('user.cv.download')->middleware('throttle:10,1');
+    Route::delete('/user/cv/online',[UserController::class, 'deleteOnlineCv'])->name('user.cv.delete');
+});
+
