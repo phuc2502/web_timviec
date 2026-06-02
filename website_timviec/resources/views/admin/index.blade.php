@@ -34,7 +34,7 @@
   </div>
 </div>
 
-<div class="grid" style="grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
+<div class="grid-2-1">
 
   {{-- NGƯỜI DÙNG MỚI NHẤT & PHÂN QUYỀN CHỨC NĂNG QUICK ACCESS --}}
   <div class="card">

@@ -15,7 +15,7 @@
 
 <form action="{{ url('/job/'.$listing->id.'/update') }}" method="POST" enctype="multipart/form-data">
   @csrf @method('PUT')
-  <div class="grid" style="grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+  <div class="grid-2-1">
     <div class="flex-col gap-16">
       <div class="card">
         <div class="card-header"><span class="fw-700 fs-15"><i class="fas fa-edit" style="color:var(--primary);margin-right:8px"></i>Nội dung tin đăng</span></div>

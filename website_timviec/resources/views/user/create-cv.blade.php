@@ -13,7 +13,7 @@
 <form action="{{ route('user.cv.save') }}" method="POST" enctype="multipart/form-data" id="cv-form" class="flex-col gap-20">
   @csrf
 
-  <div class="grid" style="grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
+  <div class="grid-2-1">
     
     {{-- Cột trái: Form nhập liệu --}}
     <div class="flex-col gap-20">
@@ -62,7 +62,7 @@
             </div>
           </div>
 
-          <div class="grid gap-16 mb-16" style="grid-template-columns: 1fr 2fr;">
+          <div class="grid-1-2 gap-16 mb-16">
             <div class="form-group">
               <label class="form-label fw-600 fs-12 mb-6">Ảnh thẻ hiện tại</label>
               <div style="width: 80px; height: 80px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center;">

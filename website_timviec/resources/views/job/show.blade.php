@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container section">
-  <div class="flex gap-24" style="align-items:flex-start">
+  <div class="main-layout main-layout--reverse">
 
     {{-- MAIN --}}
     <div style="flex:1;min-width:0">

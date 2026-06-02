@@ -42,7 +42,7 @@
   </div>
 </div>
 
-<div class="grid" style="grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+<div class="grid-2-1">
 
   {{-- RECENT JOBS --}}
   <div class="card">
@@ -157,7 +157,7 @@
   </div>
 @endif
 
-<div class="grid" style="grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+<div class="grid-2-1">
   
   {{-- Applied Jobs --}}
   <div class="card">

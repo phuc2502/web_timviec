@@ -9,7 +9,7 @@
   </div>
 </div>
 
-<div class="grid" style="grid-template-columns:1fr 2fr;gap:20px;align-items:start">
+<div class="grid-1-2">
 
   {{-- LEFT: AVATAR --}}
   <div class="flex-col gap-16">

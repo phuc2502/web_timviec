@@ -8,15 +8,16 @@
     <p class="text-muted fs-13 mt-2">Tổng: {{ $listings->total() }} tin đăng</p>
   </div>
   <form action="{{ url('/admin/jobs') }}" method="GET">
-    <div class="flex gap-8">
+    <div class="flex-responsive">
       <input type="text" name="search" class="form-control" style="width:240px" placeholder="Tìm tiêu đề, công ty..." value="{{ request('search') }}">
-      <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+      <button type="submit" class="btn btn-primary btn-sm" style="height: 38px; width: 44px; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-search"></i></button>
     </div>
   </form>
 </div>
 
 <div class="card">
-  <table class="table">
+  <div class="table-responsive">
+    <table class="table">
     <thead>
       <tr>
         <th>#</th>
@@ -69,7 +70,8 @@
         <tr><td colspan="8" class="text-center text-muted" style="padding:32px">Không có tin tuyển dụng nào</td></tr>
       @endforelse
     </tbody>
-  </table>
+    </table>
+  </div>
 
   @if($listings->hasPages())
     <div class="card-footer">

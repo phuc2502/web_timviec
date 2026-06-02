@@ -8,9 +8,8 @@
     <p class="text-muted fs-13 mt-2">Tổng số: <strong>{{ $users->total() }}</strong> thành viên hệ thống</p>
   </div>
   
-  {{-- Bộ lọc tìm kiếm --}}
   <form action="{{ url('/admin/users') }}" method="GET">
-    <div style="display:flex; gap:8px;">
+    <div class="flex-responsive">
       <input type="text" name="search" class="form-control" style="width:220px; font-size:13px;" placeholder="Tìm theo tên, email..." value="{{ request('search') }}">
       <select name="type" class="form-control" style="width:140px; font-size:13px; cursor:pointer;">
         <option value="">Tất cả vai trò</option>
@@ -24,7 +23,8 @@
 </div>
 
 <div class="card shadow-sm" style="border-radius: var(--radius-lg); overflow: hidden;">
-  <table class="table" style="vertical-align: middle;">
+  <div class="table-responsive">
+    <table class="table" style="vertical-align: middle;">
     <thead>
       <tr style="background: #f8fafc; border-bottom: 1px solid var(--border);">
         <th style="width: 50px;">ID</th>
@@ -98,7 +98,8 @@
         <tr><td colspan="7" class="text-center text-muted" style="padding:32px">Không tìm thấy thành viên nào thỏa mãn điều kiện tìm kiếm.</td></tr>
       @endforelse
     </tbody>
-  </table>
+    </table>
+  </div>
 
   {{-- Phân trang chuẩn --}}
   @if($users->hasPages())

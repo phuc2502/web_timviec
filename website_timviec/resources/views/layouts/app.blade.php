@@ -108,7 +108,7 @@
 {{-- FOOTER --}}
 <footer class="footer">
   <div class="container">
-    <div class="grid-4" style="grid-template-columns:2fr 1fr 1fr 1fr">
+    <div class="footer-grid">
       <div>
         <div style="font-size:24px;font-weight:800;color:var(--primary);margin-bottom:10px">IT<span style="color:#fff">Works</span></div>
         <p style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.7">Nền tảng tuyển dụng IT hàng đầu Việt Nam. Kết nối nhân tài và doanh nghiệp công nghệ.</p>

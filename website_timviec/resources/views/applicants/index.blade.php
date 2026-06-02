@@ -20,7 +20,7 @@
     @foreach($listings as $listing)
       <div class="card">
         <div class="card-body" style="padding:20px">
-          <div class="flex gap-16" style="align-items:center">
+          <div class="flex-responsive-card">
             <div style="flex:1">
               <a href="{{ url('/job/show/'.$listing->slug) }}" class="fw-700 fs-15" style="color:var(--secondary)" target="_blank">
                 {{ $listing->title }}

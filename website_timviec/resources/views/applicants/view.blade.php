@@ -26,7 +26,7 @@
     @foreach($applicants as $applicant)
       <div class="card" style="{{ $applicant->pivot->shortlisted ? 'border-left:4px solid var(--primary)' : '' }}">
         <div class="card-body" style="padding:18px 20px">
-          <div class="flex gap-16" style="align-items:center">
+          <div class="flex-responsive-card">
             {{-- Avatar --}}
             @if($applicant->profile_pic)
               <img src="{{ asset('storage/images/'.$applicant->profile_pic) }}" class="avatar avatar-md" alt="">
