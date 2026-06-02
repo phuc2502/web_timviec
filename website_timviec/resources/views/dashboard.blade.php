@@ -42,7 +42,7 @@
   </div>
 </div>
 
-<div class="grid-2-1">
+<div class="grid" style="grid-template-columns:2fr 1fr;gap:20px;align-items:start">
 
   {{-- RECENT JOBS --}}
   <div class="card">
@@ -114,8 +114,9 @@
       <div class="card-header"><span class="fw-700 fs-14">Thao tác nhanh</span></div>
       <div class="card-body" style="padding:12px">
         <div class="flex-col gap-8">
-          <a href="{{ url('/job/create') }}" class="btn btn-primary btn-block"><i class="fas fa-plus mr-4"></i> Đăng tin mới</a>
-          <a href="{{ url('/applicants') }}" class="btn btn-outline btn-block"><i class="fas fa-users mr-4"></i> Danh sách ứng viên</a>
+          <a href="{{ route('job.create') }}" class="btn btn-primary btn-block"><i class="fas fa-plus mr-4"></i> Đăng tin mới</a>
+          <a href="{{ route('job.manage') }}" class="btn btn-outline btn-block"><i class="fas fa-briefcase mr-4"></i> Quản lý tin đăng</a>
+          <a href="{{ route('employer.subscription.status') }}" class="btn btn-outline btn-block"><i class="fas fa-crown mr-4"></i> Gói Premium</a>
           <a href="{{ url('/messages') }}" class="btn btn-outline btn-block"><i class="fas fa-comment-dots mr-4"></i> Tin nhắn trao đổi</a>
         </div>
       </div>
@@ -147,6 +148,19 @@
     <div class="stat-card__icon stat-card__icon-green"><i class="fas fa-file-pdf"></i></div>
     <div><div class="stat-card__num">{{ auth()->user()->resume ? 1 : 0 }}</div><div class="stat-card__label">CV đã tải lên</div></div>
   </div>
+  <div class="stat-card" style="grid-column:span 3">
+    @php $tokenBalance = \App\Models\UserToken::where('user_id', auth()->id())->value('balance') ?? 0; @endphp
+    <div class="stat-card__icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-ticket-alt"></i></div>
+    <div style="flex:1">
+      <div class="stat-card__num">{{ $tokenBalance }}</div>
+      <div class="stat-card__label">Lượt ứng tuyển còn lại</div>
+    </div>
+    @if($tokenBalance == 0)
+      <a href="{{ route('payment.token') }}" class="btn btn-primary btn-sm" style="margin-left:auto;align-self:center"><i class="fas fa-plus"></i> Mua thêm</a>
+    @else
+      <a href="{{ route('payment.token') }}" class="btn btn-outline btn-sm" style="margin-left:auto;align-self:center"><i class="fas fa-shopping-cart"></i> Mua thêm</a>
+    @endif
+  </div>
 </div>
 
 {{-- CV ALERT --}}
@@ -157,7 +171,7 @@
   </div>
 @endif
 
-<div class="grid-2-1">
+<div class="grid" style="grid-template-columns:2fr 1fr;gap:20px;align-items:start">
   
   {{-- Applied Jobs --}}
   <div class="card">
@@ -198,6 +212,8 @@
           <a href="{{ url('/user/cv/create') }}" class="btn btn-primary btn-block"><i class="fas fa-magic"></i> Tạo CV online mới</a>
           <a href="{{ url('/user/cv') }}" class="btn btn-outline btn-block"><i class="fas fa-upload"></i> Quản lý & Tải lên CV</a>
           <a href="{{ url('/job') }}" class="btn btn-outline btn-block"><i class="fas fa-search"></i> Tìm kiếm việc làm IT</a>
+          <a href="{{ route('candidate.history') }}" class="btn btn-outline btn-block"><i class="fas fa-history"></i> Lịch sử ứng tuyển</a>
+          <a href="{{ route('payment.token') }}" class="btn btn-outline btn-block"><i class="fas fa-ticket-alt"></i> Mua lượt ứng tuyển</a>
           <a href="{{ url('/messages') }}" class="btn btn-outline btn-block"><i class="fas fa-comment-dots"></i> Hộp thư trao đổi</a>
         </div>
       </div>

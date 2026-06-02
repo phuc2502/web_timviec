@@ -49,10 +49,10 @@
 
 {{-- MAIN --}}
 <div class="container section">
-  <div class="main-layout">
+  <div class="flex gap-24" style="align-items:flex-start">
 
     {{-- SIDEBAR FILTER --}}
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" style="display:none" id="sidebar">
       <form action="{{ url('/job') }}" method="GET">
         <input type="hidden" name="search" value="{{ request('search') }}">
 
@@ -110,7 +110,7 @@
             <option value="newest">Mới nhất</option>
             <option value="salary">Lương cao nhất</option>
           </select>
-          <button onclick="document.getElementById('sidebar').classList.toggle('active')" class="btn btn-outline btn-sm"><i class="fas fa-filter"></i> Lọc</button>
+          <button onclick="document.getElementById('sidebar').style.display=document.getElementById('sidebar').style.display==='none'?'block':'none'" class="btn btn-outline btn-sm"><i class="fas fa-filter"></i> Lọc</button>
         </div>
       </div>
 

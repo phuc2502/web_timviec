@@ -12,7 +12,7 @@
 
 <form action="{{ url('/job/store') }}" method="POST" enctype="multipart/form-data">
   @csrf
-  <div class="grid-2-1">
+  <div class="grid" style="grid-template-columns:2fr 1fr;gap:20px;align-items:start">
 
     {{-- LEFT --}}
     <div class="flex-col gap-16">

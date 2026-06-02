@@ -10,9 +10,9 @@
   
   {{-- Tìm kiếm tin tuyển dụng --}}
   <form action="{{ url('/admin/permissions') }}" method="GET">
-    <div class="flex-responsive">
+    <div style="display:flex; gap:8px;">
       <input type="text" name="search" class="form-control" style="width:250px; font-size:13px;" placeholder="Tìm kiếm theo tiêu đề tin..." value="{{ request('search') }}">
-      <button type="submit" class="btn btn-primary btn-sm" style="padding:0 14px; height:38px;"><i class="fas fa-search"></i> Lọc</button>
+      <button type="submit" class="btn btn-primary btn-sm" style="padding:0 14px;"><i class="fas fa-search"></i> Lọc</button>
     </div>
   </form>
 </div>
@@ -29,8 +29,7 @@
 </div>
 
 <div class="card shadow-sm" style="border-radius: var(--radius-lg); overflow: hidden;">
-  <div class="table-responsive">
-    <table class="table" style="vertical-align: middle;">
+  <table class="table" style="vertical-align: middle;">
     <thead>
       <tr style="background: #f8fafc; border-bottom: 1px solid var(--border);">
         <th style="width: 50px;">ID</th>
@@ -56,7 +55,7 @@
           <td class="text-muted fs-12">{{ $job->created_at->format('d/m/Y') }}</td>
           <td>
             {{-- Form chuyển giao quyền sở hữu dữ liệu --}}
-            <form action="{{ url('/admin/permissions/transfer/'.$job->id) }}" method="POST" class="flex-responsive" style="margin: 0; align-items: center;">
+            <form action="{{ url('/admin/permissions/transfer/'.$job->id) }}" method="POST" class="flex gap-6" style="margin: 0; align-items: center;">
               @csrf
               <select name="new_owner_id" class="form-control" style="font-size:12px; padding: 6px 10px; cursor: pointer; flex: 1;" required>
                 @foreach($employers as $emp)
@@ -77,8 +76,7 @@
         <tr><td colspan="5" class="text-center text-muted" style="padding:32px">Không tìm thấy tin tuyển dụng nào phù hợp.</td></tr>
       @endforelse
     </tbody>
-    </table>
-  </div>
+  </table>
 
   {{-- Phân trang --}}
   @if($listings->hasPages())

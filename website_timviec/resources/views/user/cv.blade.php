@@ -85,7 +85,7 @@
             </div>
           </div>
 
-          <div class="grid-2" style="gap: 8px; margin-bottom: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
             <a href="{{ route('user.cv.preview') }}" class="btn btn-outline" style="border-color: #1a73e8; color: #1a73e8; justify-content: center; font-size: 13px;">
               <i class="fas fa-eye"></i> Xem & Tải PDF
             </a>
