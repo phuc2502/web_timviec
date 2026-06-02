@@ -273,14 +273,15 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 /* ================== JOB ITEM ================== */
 .job-card {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-main);
   transition: var(--transition);
   position: relative;
-  align-items: center;
 }
 .job-card:hover {
   border-color: var(--primary);
@@ -294,24 +295,45 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   padding: 4px;
   background: #fff;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .job-card__header {
   display: flex;
-  flex: 1;
+  align-items: flex-start;
   gap: 16px;
+  width: 100%;
 }
-.job-card__info { flex: 1; }
+.job-card__info { flex: 1; min-width: 0; }
 .job-card__title {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-dark);
   margin-bottom: 4px;
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.job-card__company { color: var(--text-secondary); margin-bottom: 8px; font-size: 13px; }
-.job-card__tags { display: flex; gap: 8px; margin-top: 8px; }
-.job-card__footer { display: flex; align-items: center; justify-content: space-between; flex: 1; margin-left: auto; }
-.job-card__deadline { font-size: 13px; color: var(--danger); font-weight: 500; }
+.job-card__company { 
+  color: var(--text-secondary); 
+  margin-bottom: 0; 
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.job-card__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.job-card__footer { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+}
+.job-card__deadline { font-size: 13px; color: var(--danger); font-weight: 500; display: flex; align-items: center; gap: 4px; }
 
 /* ================== SIDEBAR LAYOUT ================== */
 .dash-layout {
