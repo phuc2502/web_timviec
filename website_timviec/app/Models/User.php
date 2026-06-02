@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -53,5 +55,61 @@ class User extends Authenticatable
     public function cvData()
     {
         return $this->hasOne(\App\Models\CvData::class);
+    }
+
+    /**
+     * Lượt ứng tuyển của ứng viên (1-1).
+     */
+    public function userToken()
+    {
+        return $this->hasOne(\App\Models\UserToken::class);
+    }
+
+    /**
+     * CVs đã upload của ứng viên (1-n).
+     */
+    public function cvs()
+    {
+        return $this->hasMany(\App\Models\Cv::class);
+    }
+
+    /**
+     * Đơn ứng tuyển của ứng viên (1-n).
+     */
+    public function applications()
+    {
+        return $this->hasMany(\App\Models\Application::class);
+    }
+
+    /**
+     * Gói subscription của nhà tuyển dụng (1-n).
+     */
+    public function subscriptions()
+    {
+        return $this->hasMany(\App\Models\Subscription::class);
+    }
+
+    /**
+     * Lịch sử thanh toán (1-n).
+     */
+    public function payments()
+    {
+        return $this->hasMany(\App\Models\Payment::class);
+    }
+
+    /**
+     * Kiểm tra có phải ứng viên không.
+     */
+    public function isCandidate(): bool
+    {
+        return $this->user_type === 'employee';
+    }
+
+    /**
+     * Kiểm tra có phải nhà tuyển dụng không.
+     */
+    public function isEmployer(): bool
+    {
+        return $this->user_type === 'employer';
     }
 }
