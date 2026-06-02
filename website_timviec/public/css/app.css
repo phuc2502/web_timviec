@@ -273,9 +273,9 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 /* ================== JOB ITEM ================== */
 .job-card {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -299,8 +299,16 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   align-items: center;
   justify-content: center;
 }
+.job-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
 .job-card__header {
   display: flex;
+  justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
   width: 100%;

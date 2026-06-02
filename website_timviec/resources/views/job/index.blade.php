@@ -116,41 +116,46 @@
 
       @forelse($listings as $listing)
         <div class="job-card mb-12">
-          <div class="job-card__header">
-            <div class="job-card__logo" style="display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--primary)">
-              @if($listing->feature_image)
-                <img src="{{ asset('storage/images/'.$listing->feature_image) }}" alt="{{ $listing->title }}" style="width:48px;height:48px;object-fit:contain">
-              @else
-                <i class="fas fa-building"></i>
-              @endif
-            </div>
-            <div class="job-card__info">
-              <a href="{{ url('/job/show/'.$listing->slug) }}" class="job-card__title">{{ $listing->title }}</a>
-              <div class="job-card__company">
-                <i class="fas fa-building fa-fw" style="color:var(--text-muted)"></i>
-                {{ $listing->user->company_name ?? $listing->user->name }}
+          <!-- Left: Logo box -->
+          <div class="job-card__logo" style="display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--primary)">
+            @if($listing->feature_image)
+              <img src="{{ asset('storage/images/'.$listing->feature_image) }}" alt="{{ $listing->title }}" style="width:48px;height:48px;object-fit:contain">
+            @else
+              <i class="fas fa-building"></i>
+            @endif
+          </div>
+
+          <!-- Right: Stacked Info, Tags and Footer -->
+          <div class="job-card__content">
+            <div class="job-card__header">
+              <div class="job-card__info">
+                <a href="{{ url('/job/show/'.$listing->slug) }}" class="job-card__title">{{ $listing->title }}</a>
+                <div class="job-card__company">
+                  <i class="fas fa-building fa-fw" style="color:var(--text-muted)"></i>
+                  {{ $listing->user->company_name ?? $listing->user->name }}
+                </div>
               </div>
+              @auth
+                <button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="saveJob({{ $listing->id }})">
+                  <i class="far fa-bookmark"></i>
+                </button>
+              @endauth
             </div>
-            @auth
-              <button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="saveJob({{ $listing->id }})">
-                <i class="far fa-bookmark"></i>
-              </button>
-            @endauth
-          </div>
 
-          <div class="job-card__tags">
-            <span class="tag tag-green"><i class="fas fa-money-bill-wave" style="margin-right:4px"></i>
-              {{ $listing->salary == 0 ? 'Thỏa thuận' : number_format($listing->salary).' đ' }}
-            </span>
-            <span class="tag tag-blue"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>{{ $listing->address }}</span>
-            <span class="tag tag-gray">{{ $listing->job_type }}</span>
-          </div>
+            <div class="job-card__tags">
+              <span class="tag tag-green"><i class="fas fa-money-bill-wave" style="margin-right:4px"></i>
+                {{ $listing->salary == 0 ? 'Thỏa thuận' : number_format($listing->salary).' đ' }}
+              </span>
+              <span class="tag tag-blue"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>{{ $listing->address }}</span>
+              <span class="tag tag-gray">{{ $listing->job_type }}</span>
+            </div>
 
-          <div class="job-card__footer">
-            <span class="job-card__deadline">
-              <i class="fas fa-clock fa-fw"></i> Hết hạn: {{ \Carbon\Carbon::parse($listing->application_close_date)->format('d/m/Y') }}
-            </span>
-            <a href="{{ url('/job/show/'.$listing->slug) }}" class="btn btn-primary btn-sm">Xem chi tiết</a>
+            <div class="job-card__footer">
+              <span class="job-card__deadline">
+                <i class="fas fa-clock fa-fw"></i> Hết hạn: {{ \Carbon\Carbon::parse($listing->application_close_date)->format('d/m/Y') }}
+              </span>
+              <a href="{{ url('/job/show/'.$listing->slug) }}" class="btn btn-primary btn-sm">Xem chi tiết</a>
+            </div>
           </div>
         </div>
       @empty
