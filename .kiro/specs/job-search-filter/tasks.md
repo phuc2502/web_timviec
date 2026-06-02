@@ -6,8 +6,8 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
 
 ## Tasks
 
-- [ ] 1. Tạo DB Migration cho bảng `listings`
-  - [ ] 1.1 Tạo migration thêm các cột mới vào bảng `listings`
+- [x] 1. Tạo DB Migration cho bảng `listings`
+  - [x] 1.1 Tạo migration thêm các cột mới vào bảng `listings`
     - Tạo file `database/migrations/xxxx_add_search_columns_to_listings_table.php`
     - Thêm cột `work_mode` ENUM('onsite','remote','hybrid') NOT NULL DEFAULT 'onsite' sau cột `job_type`
     - Thêm cột `experience_years_min` TINYINT UNSIGNED NULL sau `work_mode`
@@ -17,14 +17,14 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Implement `down()` để rollback (dropColumn + dropIndex)
     - _Requirements: 3.1, 7.1, 8.1, 14.4_
 
-  - [ ] 1.2 Tạo migration cập nhật ENUM `job_type`
+  - [x] 1.2 Tạo migration cập nhật ENUM `job_type`
     - Tạo file migration riêng để thực thi raw SQL:
       `ALTER TABLE listings MODIFY job_type ENUM('full-time','part-time','freelance','internship') NOT NULL DEFAULT 'full-time';`
     - Implement `down()` để khôi phục ENUM cũ (thêm lại 'remote','hybrid')
     - _Requirements: 2.2_
 
-- [ ] 2. Cập nhật và tạo Models
-  - [ ] 2.1 Tạo/cập nhật `Listing` model
+- [x] 2. Cập nhật và tạo Models
+  - [x] 2.1 Tạo/cập nhật `Listing` model
     - Tạo file `app/Models/Listing.php` (nếu chưa có)
     - Khai báo `$fillable` bao gồm tất cả cột cần thiết: `user_id`, `title`, `slug`, `predes`, `description`, `requirements`, `benefits`, `job_type`, `work_mode`, `experience_years_min`, `experience_years_max`, `job_level`, `address`, `salary`, `feature_image`, `application_close_date`, `status`
     - Khai báo `$casts`: `requirements` → `array`, `benefits` → `array`, `application_close_date` → `date`, `salary` → `integer`, `experience_years_min` → `integer`, `experience_years_max` → `integer`
@@ -33,7 +33,7 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Implement scope `scopeActive(Builder $query)`: lọc `status = 'open'` AND `application_close_date >= CURDATE()`
     - _Requirements: 12.1, 12.2, 13.2, 13.3, 14.2_
 
-  - [ ] 2.2 Tạo `Skill` model
+  - [x] 2.2 Tạo `Skill` model
     - Tạo file `app/Models/Skill.php` (nếu chưa có)
     - Khai báo `$fillable`: `name`, `slug`
     - Implement relationship `listings()`: `BelongsToMany` → `Listing` via `listing_skill`

@@ -42,4 +42,17 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Indicate that the user is an employer with company info.
+     */
+    public function employer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_type'      => 'employer',
+            'company_name'   => fake()->company(),
+            'company_logo'   => null,
+            'company_size'   => fake()->randomElement(['1-9', '10-49', '50-199', '200-499', '500+']),
+        ]);
+    }
 }
