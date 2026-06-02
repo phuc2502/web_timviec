@@ -106,9 +106,11 @@
           <span class="text-muted fs-13 ml-8">({{ method_exists($listings, 'total') ? $listings->total() : $listings->count() }} kết quả)</span>
         </div>
         <div class="flex gap-8">
-          <select class="form-control" style="width:auto;padding:6px 12px;font-size:13px" onchange="location='?sort='+this.value">
-            <option value="newest">Mới nhất</option>
-            <option value="salary">Lương cao nhất</option>
+          <select class="form-control" style="width:auto;padding:6px 12px;font-size:13px" onchange="location=this.value">
+            <option value="{{ request()->fullUrlWithQuery(['sort' => 'newest']) }}" {{ request('sort') == 'newest' || !request('sort') ? 'selected' : '' }}>Mới nhất</option>
+            <option value="{{ request()->fullUrlWithQuery(['sort' => 'salary_desc']) }}" {{ request('sort') == 'salary_desc' ? 'selected' : '' }}>Lương cao nhất</option>
+            <option value="{{ request()->fullUrlWithQuery(['sort' => 'salary_asc']) }}" {{ request('sort') == 'salary_asc' ? 'selected' : '' }}>Lương thấp nhất</option>
+            <option value="{{ request()->fullUrlWithQuery(['sort' => 'closing_soon']) }}" {{ request('sort') == 'closing_soon' ? 'selected' : '' }}>Hạn nộp gần nhất</option>
           </select>
           <button onclick="document.getElementById('sidebar').style.display=document.getElementById('sidebar').style.display==='none'?'block':'none'" class="btn btn-outline btn-sm"><i class="fas fa-filter"></i> Lọc</button>
         </div>

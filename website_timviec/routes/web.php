@@ -82,13 +82,32 @@ function mockListings($n = 6) {
     return collect($list);
 }
 
+function getSortedMockListings() {
+    $sort = request('sort', 'newest');
+    $listings = mockListings(6);
+    
+    if ($sort === 'salary_desc') {
+        return $listings->sortByDesc('salary')->values();
+    } elseif ($sort === 'salary_asc') {
+        return $listings->sort(function ($a, $b) {
+            if ($a->salary == 0 && $b->salary != 0) return 1;
+            if ($a->salary != 0 && $b->salary == 0) return -1;
+            return $a->salary <=> $b->salary;
+        })->values();
+    } elseif ($sort === 'closing_soon') {
+        return $listings->sortBy('application_close_date')->values();
+    } else {
+        return $listings->sortByDesc('created_at')->values();
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC PAGES
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::get('/', function () {
     return view('job.index', [
-        'listings' => mockListings(6),
+        'listings' => getSortedMockListings(),
         'total' => 6,
     ]);
 });
@@ -118,7 +137,7 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
     Route::get('/user/profile',    fn() => view('user.profile'));
 
     // Jobs
-    Route::get('/job',         fn() => view('job.index', ['listings' => mockListings(6), 'total' => 6]));
+    Route::get('/job',         fn() => view('job.index', ['listings' => getSortedMockListings(), 'total' => 6]));
     Route::get('/job/create',  fn() => view('job.create'));
     Route::get('/job/manage',  fn() => view('job.manage', ['listings' => mockListings(4)]));
     Route::get('/job/{id}/edit', fn($id) => view('job.edit', ['listing' => mockListing($id)]));
