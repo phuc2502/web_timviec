@@ -82,6 +82,13 @@ Route::middleware(['auth', 'candidate'])->group(function () {
     Route::get('/candidate/history',  [ApplicationController::class, 'candidateHistory'])->name('candidate.history');
     Route::get('/candidate/applications/{id}', [ApplicationController::class, 'candidateApplicationDetail'])->name('candidate.application.detail');
 
+// ── Notifications (tất cả user đã đăng nhập)
+Route::middleware('auth')->group(function () {
+    Route::get('/notifications',           [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read',[\App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+});
+
     Route::get('/payment/token',          [PaymentController::class, 'tokenPurchasePage'])->name('payment.token');
     Route::post('/payment/token',         [PaymentController::class, 'initiateTokenPurchase'])->name('payment.token.initiate');
     Route::get('/payment/token/callback', [PaymentController::class, 'tokenCallback'])->name('payment.token.callback');
