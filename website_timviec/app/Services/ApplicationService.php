@@ -61,7 +61,7 @@ class ApplicationService
                     'cv_id'        => $cvId,
                     'cover_letter' => $data['cover_letter'] ?? null,
                     'status'       => 'submitted',
-                    'applied_at'   => now(),
+                    'applied_at'   => now('Asia/Ho_Chi_Minh'),
                 ]);
                 return $existing->fresh();
             }
@@ -73,7 +73,7 @@ class ApplicationService
                 'cv_id'        => $cvId,
                 'cover_letter' => $data['cover_letter'] ?? null,
                 'status'       => 'submitted',
-                'applied_at'   => now(),
+                'applied_at'   => now('Asia/Ho_Chi_Minh'),
             ]);
 
             // ── 6. Trừ 1 lượt ứng tuyển ───────────────────────────────────
@@ -137,7 +137,7 @@ class ApplicationService
         if ($application->status === 'submitted') {
             $application->update([
                 'status'            => 'viewed',
-                'status_updated_at' => now(),
+                'status_updated_at' => now('Asia/Ho_Chi_Minh'),
             ]);
         }
 
@@ -145,18 +145,23 @@ class ApplicationService
     }
 
     /**
-     * Cập nhật trạng thái ứng tuyển (theo quy tắc một chiều).
+     * Cập nhật trạng thái ứng tuyển (theo quy tắc state machine).
      *
+     * @param  array  $extra  Dữ liệu thêm: interview_scheduled_at (khi status=interviewing)
      * @throws \RuntimeException  Khi vi phạm quy tắc chuyển trạng thái
      */
-    public function updateStatus(User $employer, int $applicationId, string $newStatus): Application
+    public function updateStatus(User $employer, int $applicationId, string $newStatus, array $extra = []): Application
     {
-        $application = Application::with(['user', 'listing'])
+        $application = Application::with(['user', 'listing.user'])
             ->whereHas('listing', fn($q) => $q->where('user_id', $employer->id))
             ->findOrFail($applicationId);
 
         if ($application->status === $newStatus) {
             throw new \RuntimeException('Trạng thái không thay đổi.');
+        }
+
+        if ($application->isClosed()) {
+            throw new \RuntimeException('Hồ sơ đã ở trạng thái đóng, không thể cập nhật.');
         }
 
         if (!$application->canTransitionTo($newStatus)) {
@@ -167,17 +172,67 @@ class ApplicationService
 
         $oldStatus = $application->status;
 
-        $application->update([
+        $updateData = [
             'status'            => $newStatus,
-            'status_updated_at' => now(),
-        ]);
+            'status_updated_at' => now('Asia/Ho_Chi_Minh'),
+        ];
 
-        // Dispatch event gửi email thông báo
-        ApplicationStatusUpdated::dispatch($application->fresh(), $oldStatus);
+        // Lưu ngày giờ phỏng vấn nếu status = interviewing
+        if ($newStatus === 'interviewing' && !empty($extra['interview_scheduled_at'])) {
+            $updateData['interview_scheduled_at'] = $extra['interview_scheduled_at'];
+        }
+
+        $application->update($updateData);
+
+        $fresh = $application->fresh(['user', 'listing.user']);
+
+        // 1. Gửi in-app notification cho ứng viên
+        $this->createStatusNotification($fresh, $oldStatus);
+
+        // 2. Dispatch event (gửi email nếu status = interviewing)
+        ApplicationStatusUpdated::dispatch($fresh, $oldStatus);
 
         Log::info("Application #{$applicationId} status: {$oldStatus} → {$newStatus} by employer {$employer->id}");
 
-        return $application->fresh();
+        return $fresh;
+    }
+
+    /**
+     * Tạo in-app notification cho ứng viên khi trạng thái thay đổi.
+     */
+    private function createStatusNotification(Application $application, string $oldStatus): void
+    {
+        $statusLabel = \App\Models\Application::STATUS_LABELS[$application->status] ?? $application->status;
+        $jobTitle    = $application->listing->title;
+        $company     = $application->listing->user->company_name ?? $application->listing->user->name;
+
+        $titles = [
+            'viewed'       => "Hồ sơ của bạn đã được xem",
+            'approved'     => "Hồ sơ của bạn được duyệt! 🎉",
+            'interviewing' => "Bạn được mời phỏng vấn! 🎯",
+            'rejected'     => "Thông báo kết quả hồ sơ",
+        ];
+
+        $bodies = [
+            'viewed'       => "{$company} đã xem hồ sơ ứng tuyển vị trí **{$jobTitle}** của bạn.",
+            'approved'     => "Chúc mừng! {$company} đã duyệt hồ sơ ứng tuyển vị trí **{$jobTitle}** của bạn.",
+            'interviewing' => "Chúc mừng! {$company} mời bạn tham gia phỏng vấn cho vị trí **{$jobTitle}**." .
+                              ($application->interview_scheduled_at ? " Thời gian dự kiến: " . $application->interview_scheduled_at->format('d/m/Y H:i') : ""),
+            'rejected'     => "{$company} thông báo hồ sơ ứng tuyển vị trí **{$jobTitle}** của bạn chưa phù hợp lần này.",
+        ];
+
+        \App\Models\AppNotification::create([
+            'user_id' => $application->user_id,
+            'type'    => 'application_status',
+            'title'   => $titles[$application->status] ?? "Cập nhật trạng thái hồ sơ",
+            'body'    => $bodies[$application->status] ?? "Trạng thái hồ sơ của bạn đã được cập nhật thành {$statusLabel}.",
+            'data'    => [
+                'application_id' => $application->id,
+                'listing_id'     => $application->listing_id,
+                'status'         => $application->status,
+                'old_status'     => $oldStatus,
+            ],
+        ]);
     }
 
     // ════════════════════════════════════════════════════════════════════════

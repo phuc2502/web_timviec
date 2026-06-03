@@ -5,13 +5,14 @@ namespace App\Services;
 use Illuminate\Support\Str;
 
 /**
- * VNPayService - Tạo URL thanh toán & xác thực callback.
+ * VNPayService - Tạo URL & xác thực callback theo đúng chuẩn VNPay 2.1.0
  *
- * Cấu hình trong config/vnpay.php hoặc .env:
- *   VNPAY_TMN_CODE, VNPAY_HASH_SECRET, VNPAY_URL
- *
- * return_url được truyền dynamically theo từng loại thanh toán
- * (token callback ≠ subscription callback).
+ * Thuật toán chữ ký (theo PHP demo chính thức của VNPay):
+ *   1. Sort params theo key (ksort)
+ *   2. Build query string bằng http_build_query() KHÔNG dùng PHP_QUERY_RFC3986
+ *      (spaces → '+', không phải '%20')
+ *   3. hash_hmac('sha512', $queryString, $hashSecret)
+ *   4. URL cuối = payUrl + '?' + queryString + '&vnp_SecureHash=' + hash
  */
 class VNPayService
 {
@@ -28,13 +29,6 @@ class VNPayService
 
     /**
      * Tạo URL thanh toán VNPay.
-     *
-     * @param  string      $txnRef      Mã giao dịch duy nhất
-     * @param  int         $amount      Số tiền VNĐ (service tự x100)
-     * @param  string      $orderInfo   Mô tả đơn hàng
-     * @param  string      $returnUrl   URL callback sau thanh toán (per-type)
-     * @param  string      $ipAddr      IP người dùng
-     * @return string                   URL redirect sang VNPay
      */
     public function createPaymentUrl(
         string $txnRef,
@@ -47,10 +41,10 @@ class VNPayService
             'vnp_Version'    => '2.1.0',
             'vnp_Command'    => 'pay',
             'vnp_TmnCode'    => $this->tmnCode,
-            'vnp_Amount'     => $amount * 100,       // VNPay yêu cầu x100
+            'vnp_Amount'     => $amount * 100,
             'vnp_CurrCode'   => 'VND',
             'vnp_TxnRef'     => $txnRef,
-            'vnp_OrderInfo'  => $orderInfo,
+            'vnp_OrderInfo'  => $orderInfo,   // ASCII only, no diacritics
             'vnp_OrderType'  => 'other',
             'vnp_Locale'     => 'vn',
             'vnp_ReturnUrl'  => $returnUrl,
@@ -61,7 +55,8 @@ class VNPayService
 
         ksort($params);
 
-        $queryString = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        // ⚠️ KHÔNG dùng PHP_QUERY_RFC3986 — VNPay dùng chuẩn + cho spaces
+        $queryString = http_build_query($params);
         $secureHash  = hash_hmac('sha512', $queryString, $this->hashSecret);
 
         return $this->payUrl . '?' . $queryString . '&vnp_SecureHash=' . $secureHash;
@@ -80,24 +75,19 @@ class VNPayService
 
         ksort($filtered);
 
-        $queryString  = http_build_query($filtered, '', '&', PHP_QUERY_RFC3986);
+        // Dùng cùng chuẩn encode khi tạo URL
+        $queryString  = http_build_query($filtered);
         $computedHash = hash_hmac('sha512', $queryString, $this->hashSecret);
 
         return hash_equals($computedHash, $receivedHash);
     }
 
-    /**
-     * Kiểm tra giao dịch có thành công không (mã 00).
-     */
     public function isSuccess(array $data): bool
     {
         return ($data['vnp_ResponseCode'] ?? '') === '00'
             && ($data['vnp_TransactionStatus'] ?? '') === '00';
     }
 
-    /**
-     * Sinh mã txnRef duy nhất cho mỗi payment.
-     */
     public function generateTxnRef(): string
     {
         return now('Asia/Ho_Chi_Minh')->format('YmdHis') . '_' . Str::upper(Str::random(6));

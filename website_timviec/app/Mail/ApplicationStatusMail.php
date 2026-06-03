@@ -20,12 +20,29 @@ class ApplicationStatusMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $label = Application::STATUS_LABELS[$this->application->status] ?? $this->application->status;
-        return new Envelope(subject: "Cập nhật trạng thái ứng tuyển: {$label}");
+        $company  = $this->application->listing->user->company_name
+                 ?? $this->application->listing->user->name;
+        $position = $this->application->listing->title;
+
+        $subjects = [
+            'interviewing' => "🎯 [{$company}] Thư mời phỏng vấn — {$position}",
+            'rejected'     => "[{$company}] Thông báo kết quả ứng tuyển — {$position}",
+        ];
+
+        return new Envelope(
+            subject: $subjects[$this->application->status]
+                  ?? "[{$company}] Cập nhật hồ sơ ứng tuyển — {$position}"
+        );
     }
 
     public function content(): Content
     {
-        return new Content(view: 'emails.application-status');
+        $view = match($this->application->status) {
+            'interviewing' => 'emails.application-status',
+            'rejected'     => 'emails.application-rejected',
+            default        => 'emails.application-status',
+        };
+
+        return new Content(view: $view);
     }
 }

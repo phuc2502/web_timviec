@@ -77,6 +77,17 @@ class JobController extends Controller
      */
     public function store(Request $request)
     {
+        $employer = auth()->user();
+
+        // ── KIỂM TRA GIỚI HẠN FREE ACCOUNT ──────────────────────────────
+        if (!$employer->isPremium()) {
+            $postCount = $employer->monthlyPostCount();
+            if ($postCount >= 3) {
+                return redirect()->route('payment.subscription')
+                    ->with('warning', "Bạn đã dùng hết {$postCount}/3 lượt đăng tin miễn phí tháng này. Nâng cấp Premium để đăng không giới hạn!");
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
         $request->validate([
             'title'                 => ['required', 'string', 'max:255'],
             'description'           => ['required', 'string'],
@@ -119,7 +130,7 @@ class JobController extends Controller
      */
     public function manage()
     {
-        $listings = Listing::with('users')
+        $listings = Listing::withCount('applications')
             ->where('user_id', auth()->id())
             ->latest()
             ->paginate(10);

@@ -47,7 +47,7 @@ class PaymentService
         return $this->vnpay->createPaymentUrl(
             txnRef:    $txnRef,
             amount:    $amount,
-            orderInfo: "Mua {$package} luot ung tuyen - User {$candidate->id}",
+            orderInfo: "Mua {$package} luot ung tuyen",
             returnUrl: route('payment.token.callback'),
             ipAddr:    $ipAddr,
         );
@@ -153,7 +153,7 @@ class PaymentService
         return $this->vnpay->createPaymentUrl(
             txnRef:    $txnRef,
             amount:    $amount,
-            orderInfo: "Mua goi {$plan} - Employer {$employer->id}",
+            orderInfo: "Mua goi Premium {$plan}",
             returnUrl: route('payment.subscription.callback'),
             ipAddr:    $ipAddr,
         );

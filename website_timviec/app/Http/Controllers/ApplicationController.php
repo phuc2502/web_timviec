@@ -117,10 +117,12 @@ class ApplicationController extends Controller
     public function updateStatus(UpdateApplicationStatusRequest $request, int $applicationId)
     {
         $employer  = auth()->user();
-        $newStatus = $request->validated('status');
+        $validated = $request->validated();
+        $newStatus = $validated['status'];
+        $extra     = ['interview_scheduled_at' => $validated['interview_scheduled_at'] ?? null];
 
         try {
-            $this->service->updateStatus($employer, $applicationId, $newStatus);
+            $this->service->updateStatus($employer, $applicationId, $newStatus, $extra);
 
             return back()->with('success', 'Cập nhật trạng thái thành công!');
 

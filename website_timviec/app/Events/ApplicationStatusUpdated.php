@@ -12,6 +12,6 @@ class ApplicationStatusUpdated
 
     public function __construct(
         public readonly Application $application,
-        public readonly string $oldStatus,
+        public readonly string      $oldStatus,
     ) {}
 }

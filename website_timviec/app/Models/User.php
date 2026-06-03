@@ -112,4 +112,25 @@ class User extends Authenticatable
     {
         return $this->user_type === 'employer';
     }
+
+    // ─── Premium Helpers ───────────────────────────────────────────────────
+
+    /**
+     * Kiểm tra employer có đang trong gói Premium không.
+     */
+    public function isPremium(): bool
+    {
+        return !empty($this->billing_ends) && $this->billing_ends->isFuture();
+    }
+
+    /**
+     * Đếm số bài đã đăng trong tháng hiện tại.
+     */
+    public function monthlyPostCount(): int
+    {
+        return $this->listings()
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->count();
+    }
 }

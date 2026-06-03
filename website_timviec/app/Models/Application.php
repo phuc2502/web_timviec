@@ -9,37 +9,50 @@ class Application extends Model
 {
     protected $fillable = [
         'user_id', 'listing_id', 'cv_id', 'cover_letter',
-        'status', 'applied_at', 'status_updated_at',
+        'status', 'applied_at', 'status_updated_at', 'interview_scheduled_at',
     ];
 
     protected $casts = [
-        'applied_at'        => 'datetime',
-        'status_updated_at' => 'datetime',
+        'applied_at'              => 'datetime',
+        'status_updated_at'       => 'datetime',
+        'interview_scheduled_at'  => 'datetime',
     ];
 
     /**
-     * Quy tắc chuyển trạng thái một chiều.
-     * Key = trạng thái hiện tại => Value = danh sách trạng thái có thể chuyển tới
+     * State machine theo yêu cầu nghiệp vụ:
+     *   submitted  → viewed, approved, interviewing, rejected
+     *   viewed     → approved, interviewing, rejected
+     *   approved   → interviewing, rejected   (Duyệt hồ sơ - vẫn có thể lên Phỏng vấn)
+     *   interviewing → []  CLOSED (trạng thái đóng)
+     *   rejected   → []   CLOSED (trạng thái đóng)
      */
     public const STATUS_TRANSITIONS = [
-        'submitted'    => ['viewed', 'interviewing', 'accepted', 'rejected'],
-        'viewed'       => ['interviewing', 'accepted', 'rejected'],
-        'interviewing' => ['accepted', 'rejected'],
-        'accepted'     => [],   // trạng thái cuối
-        'rejected'     => [],   // trạng thái cuối
+        'submitted'    => ['viewed', 'approved', 'interviewing', 'rejected'],
+        'viewed'       => ['approved', 'interviewing', 'rejected'],
+        'approved'     => ['interviewing', 'rejected'],
+        'interviewing' => [],   // CLOSED
+        'rejected'     => [],   // CLOSED
     ];
 
     public const STATUS_LABELS = [
         'submitted'    => 'Đã nộp',
         'viewed'       => 'Đã xem',
+        'approved'     => 'Duyệt hồ sơ',
         'interviewing' => 'Phỏng vấn',
-        'accepted'     => 'Đã nhận',
-        'rejected'     => 'Từ chối',
+        'rejected'     => 'Chưa phù hợp',
     ];
+
+    /** Trạng thái đóng - không cho phép cập nhật tiếp */
+    public const CLOSED_STATUSES = ['interviewing', 'rejected'];
 
     public function canTransitionTo(string $newStatus): bool
     {
         return in_array($newStatus, self::STATUS_TRANSITIONS[$this->status] ?? []);
+    }
+
+    public function isClosed(): bool
+    {
+        return in_array($this->status, self::CLOSED_STATUSES);
     }
 
     // ── Relationships ─────────────────────────────────────────────────────
