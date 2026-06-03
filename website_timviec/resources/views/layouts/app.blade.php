@@ -20,8 +20,10 @@
     <a href="{{ url('/') }}" class="navbar-brand">IT<span>Works</span></a>
     <div class="navbar-nav">
       <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}">Trang chủ</a>
-      <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
       @auth
+        @if(auth()->user()->user_type !== 'employer')
+          <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
+        @endif
         @if(auth()->user()->user_type === 'employer')
           <a href="{{ route('job.create') }}">Đăng tuyển</a>
           <a href="{{ route('job.manage') }}">Quản lý tin</a>
@@ -35,6 +37,8 @@
         <a href="{{ url('/messages') }}">
           <i class="fas fa-comment-dots"></i> Tin nhắn
         </a>
+      @else
+        <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
       @endauth
     </div>
     <div class="navbar-actions">
@@ -45,6 +49,28 @@
               <i class="fas fa-crown"></i> Nâng cấp
             </a>
           @endif
+
+          {{-- Notification Bell --}}
+          <div id="notif-bell" style="position:relative;cursor:pointer" onclick="toggleNotifDropdown()">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--bg-gray);display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">
+              <i class="fas fa-bell" style="color:var(--text-secondary);font-size:14px"></i>
+            </div>
+            <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff">0</span>
+          </div>
+
+          {{-- Notification Dropdown --}}
+          <div id="notif-dropdown" style="display:none;position:absolute;top:52px;right:120px;width:360px;background:#fff;border-radius:var(--radius-lg);box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid var(--border);z-index:9999">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <span class="fw-700 fs-14">Thông báo</span>
+              <button onclick="markAllRead()" style="background:none;border:none;color:var(--primary);font-size:12px;cursor:pointer;padding:0">Đánh dấu đã đọc</button>
+            </div>
+            <div id="notif-list" style="max-height:380px;overflow-y:auto">
+              <div style="padding:24px;text-align:center;color:var(--text-secondary);font-size:13px">
+                <i class="fas fa-bell fa-2x mb-8" style="opacity:.2"></i>
+                <p>Đang tải...</p>
+              </div>
+            </div>
+          </div>
           <div style="position:relative;cursor:pointer" onclick="toggleDropdown()">
             @if(auth()->user()->profile_pic)
               <img src="{{ asset('storage/images/'.auth()->user()->profile_pic) }}" class="avatar avatar-sm" alt="avatar">
@@ -143,7 +169,7 @@
         <ul>
           <li><a href="{{ url('/job/create') }}">Đăng tin tuyển dụng</a></li>
           <li><a href="{{ url('/applicants') }}">Quản lý ứng viên</a></li>
-          <li><a href="{{ url('/subscribe') }}">Gói premium</a></li>
+          <li><a href="{{ route('payment.subscription') }}">Gói premium</a></li>
         </ul>
       </div>
       <div>
@@ -183,5 +209,106 @@ setTimeout(function() {
 }, 4000);
 </script>
 @stack('scripts')
+
+@auth
+<script>
+// ── Notification Bell ─────────────────────────────────
+let notifOpen = false;
+
+function toggleNotifDropdown() {
+  notifOpen = !notifOpen;
+  const dd = document.getElementById('notif-dropdown');
+  dd.style.display = notifOpen ? 'block' : 'none';
+  if (notifOpen) loadNotifications();
+}
+
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('notif-bell').contains(e.target)) {
+    document.getElementById('notif-dropdown').style.display = 'none';
+    notifOpen = false;
+  }
+});
+
+async function loadNotifications() {
+  const res  = await fetch('/notifications');
+  const data = await res.json();
+  updateBadge(data.unread_count);
+  renderNotifs(data.notifications);
+}
+
+function updateBadge(count) {
+  const badge = document.getElementById('notif-badge');
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderNotifs(notifs) {
+  const list = document.getElementById('notif-list');
+  if (!notifs.length) {
+    list.innerHTML = `<div style="padding:32px;text-align:center;color:#999;font-size:13px">
+      <i class="fas fa-bell-slash fa-2x" style="opacity:.2;display:block;margin-bottom:8px"></i>
+      Chưa có thông báo nào
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = notifs.map(n => {
+    const icons = {application_status:'fa-file-alt', payment:'fa-credit-card'};
+    const icon  = icons[n.type] || 'fa-bell';
+    const unread = !n.read_at;
+    const timeAgo = formatTime(n.created_at);
+    return `
+    <div onclick="readNotif(${n.id}, this)" style="padding:14px 16px;border-bottom:1px solid #f5f5f5;cursor:pointer;background:${unread ? '#f9fffe' : '#fff'};transition:.15s"
+      onmouseover="this.style.background='var(--bg-gray)'" onmouseout="this.style.background='${unread ? '#f9fffe' : '#fff'}'">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="width:34px;height:34px;border-radius:50%;background:${unread ? 'var(--primary-light)' : 'var(--bg-gray)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fas ${icon} fa-fw" style="color:${unread ? 'var(--primary)' : 'var(--text-secondary)'};font-size:13px"></i>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:${unread ? '600' : '400'};color:#1a1a1a;line-height:1.4">${n.title}</div>
+          <div style="font-size:12px;color:#666;margin-top:3px;line-height:1.5">${n.body}</div>
+          <div style="font-size:11px;color:#999;margin-top:4px">${timeAgo}</div>
+        </div>
+        ${unread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px"></div>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function readNotif(id, el) {
+  await fetch(`/notifications/${id}/read`, {method:'POST', headers:{'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}});
+  el.style.background = '#fff';
+  const dot = el.querySelector('[style*="border-radius:50%"]');
+  if (dot && dot.style.background.includes('primary')) dot.remove();
+  await loadNotifications();
+}
+
+async function markAllRead() {
+  await fetch('/notifications/read-all', {method:'POST', headers:{'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}});
+  loadNotifications();
+}
+
+function formatTime(dateStr) {
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 60)     return 'Vừa xong';
+  if (diff < 3600)   return Math.floor(diff/60) + ' phút trước';
+  if (diff < 86400)  return Math.floor(diff/3600) + ' giờ trước';
+  return Math.floor(diff/86400) + ' ngày trước';
+}
+
+// Auto-load badge count on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res  = await fetch('/notifications');
+    const data = await res.json();
+    updateBadge(data.unread_count);
+  } catch(e) {}
+});
+</script>
+@endauth
 </body>
 </html>

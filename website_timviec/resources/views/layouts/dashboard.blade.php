@@ -88,7 +88,7 @@
           <i class="fas fa-users fa-fw"></i> Ứng viên
         </a>
         <div class="dash-nav__section">Tài khoản</div>
-        <a href="{{ url('/subscribe') }}" class="{{ request()->is('subscribe') ? 'active' : '' }}">
+        <a href="{{ route('payment.subscription') }}" class="{{ request()->is('payment/subscription') ? 'active' : '' }}">
           <i class="fas fa-crown fa-fw"></i> Gói premium
         </a>
         <a href="{{ url('/messages') }}" class="{{ request()->is('messages*') ? 'active' : '' }}">
@@ -163,5 +163,34 @@ document.addEventListener('click', function(e) {
 });
 </script>
 @stack('scripts')
+
+@if(session('show_welcome_modal'))
+<div id="welcome-modal" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:44px 40px;max-width:500px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.18)">
+    <div style="font-size:52px;margin-bottom:16px">🎉</div>
+    <h2 class="fw-800 fs-22" style="color:#1a1a1a;margin-bottom:12px">Chào mừng bạn đến với ITWorks!</h2>
+    <p class="fs-14 text-muted" style="line-height:1.75;margin-bottom:24px">
+      Tài khoản nhà tuyển dụng của bạn đã được tạo thành công.<br><br>
+      Với tài khoản <strong>Free</strong>, bạn có thể đăng tối đa <strong>3 tin tuyển dụng/tháng</strong>.
+      Nâng cấp <strong>Premium</strong> để đăng không giới hạn và tiếp cận nhiều ứng viên hơn!
+    </p>
+    <div style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;text-align:left">
+      <div class="fw-700 fs-13" style="margin-bottom:12px;color:#333">✨ Premium bao gồm:</div>
+      <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px">
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Đăng tin không giới hạn mỗi tháng</li>
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Hiển thị ưu tiên top danh sách</li>
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Thống kê ứng viên nâng cao</li>
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Badge "Premium" trên mỗi tin đăng</li>
+      </ul>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn btn-outline">Dùng miễn phí trước</button>
+      <a href="{{ route('payment.subscription') }}" class="btn btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+        <i class="fas fa-crown"></i> Xem gói Premium
+      </a>
+    </div>
+  </div>
+</div>
+@endif
 </body>
 </html>

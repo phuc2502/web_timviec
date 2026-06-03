@@ -42,11 +42,11 @@
       @foreach($applications as $app)
         @php
           $statusConfig = [
-            'submitted'    => ['label'=>'Đã nộp',    'color'=>'#D48806','bg'=>'#FFF7E6','icon'=>'fa-paper-plane'],
-            'viewed'       => ['label'=>'Đã xem',    'color'=>'#096DD9','bg'=>'#E6F4FF','icon'=>'fa-eye'],
-            'interviewing' => ['label'=>'Phỏng vấn', 'color'=>'#4338ca','bg'=>'#F0F0FF','icon'=>'fa-calendar-check'],
-            'accepted'     => ['label'=>'Đã nhận',   'color'=>'var(--primary-dark)','bg'=>'var(--primary-light)','icon'=>'fa-check-circle'],
-            'rejected'     => ['label'=>'Từ chối',   'color'=>'var(--danger)','bg'=>'#FFF2EE','icon'=>'fa-times-circle'],
+            'submitted'    => ['label'=>'Đã nộp',       'color'=>'#D48806',           'bg'=>'#FFF7E6',            'icon'=>'fa-paper-plane'],
+            'viewed'       => ['label'=>'Đã xem',       'color'=>'#096DD9',           'bg'=>'#E6F4FF',            'icon'=>'fa-eye'],
+            'approved'     => ['label'=>'Duyệt hồ sơ',  'color'=>'#4338ca',           'bg'=>'#F0F0FF',            'icon'=>'fa-thumbs-up'],
+            'interviewing' => ['label'=>'Phỏng vấn',    'color'=>'var(--primary-dark)','bg'=>'var(--primary-light)','icon'=>'fa-calendar-check'],
+            'rejected'     => ['label'=>'Chưa phù hợp', 'color'=>'var(--danger)',      'bg'=>'#FFF2EE',            'icon'=>'fa-times-circle'],
           ];
           $s = $statusConfig[$app->status] ?? ['label'=>$app->status,'color'=>'var(--text-secondary)','bg'=>'var(--bg-gray)','icon'=>'fa-circle'];
         @endphp

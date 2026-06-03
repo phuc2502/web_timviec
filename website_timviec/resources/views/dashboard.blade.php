@@ -18,7 +18,7 @@
 @if(auth()->user()->user_trial && auth()->user()->user_trial > now() && !auth()->user()->billing_ends)
   <div class="alert alert-warning mb-16">
     <i class="fas fa-clock"></i>
-    <span>Bạn đang dùng thử miễn phí gói Doanh nghiệp — còn <strong>{{ now()->diffInDays(auth()->user()->user_trial) }} ngày</strong>. <a href="{{ url('/subscribe') }}" class="fw-700" style="color:inherit;text-decoration:underline">Nâng cấp Premium ngay</a> để nhận đầy đủ quyền lợi.</span>
+    <span>Bạn đang dùng thử miễn phí gói Doanh nghiệp — còn <strong>{{ now()->diffInDays(auth()->user()->user_trial) }} ngày</strong>. <a href="{{ route('payment.subscription') }}" class="fw-700" style="color:inherit;text-decoration:underline">Nâng cấp Premium ngay</a> để nhận đầy đủ quyền lợi.</span>
   </div>
 @endif
 
@@ -104,7 +104,7 @@
           <div style="font-size:12px;opacity:.75;margin-top:4px">Còn lại: {{ now()->diffInDays(auth()->user()->user_trial) }} ngày</div>
         @else
           <div class="fw-700 fs-15" style="color:#dc3545">Chưa đăng ký / Hết hạn</div>
-          <a href="{{ url('/subscribe') }}" class="btn btn-sm mt-12" style="background:var(--primary);color:#fff; width:100%; justify-content:center;">Nâng cấp gói ngay</a>
+          <a href="{{ route('payment.subscription') }}" class="btn btn-sm mt-12" style="background:var(--primary);color:#fff; width:100%; justify-content:center;">Nâng cấp gói ngay</a>
         @endif
       </div>
     </div>

@@ -40,11 +40,11 @@
             @foreach($applications as $app)
               @php
                 $statusConfig = [
-                  'submitted'    => ['label'=>'Đã nộp',    'class'=>'badge-warning'],
-                  'viewed'       => ['label'=>'Đã xem',    'class'=>'badge-primary'],
-                  'interviewing' => ['label'=>'Phỏng vấn', 'style'=>'background:#f0f0ff;color:#5b21b6'],
-                  'accepted'     => ['label'=>'Đã nhận',   'class'=>'badge-primary'],
-                  'rejected'     => ['label'=>'Từ chối',   'class'=>'badge-danger'],
+                  'submitted'    => ['label'=>'Đã nộp',       'class'=>'badge-warning'],
+                  'viewed'       => ['label'=>'Đã xem',       'class'=>'', 'style'=>'background:#E6F4FF;color:#096DD9'],
+                  'approved'     => ['label'=>'Duyệt hồ sơ',  'class'=>'', 'style'=>'background:#f0f0ff;color:#4338ca'],
+                  'interviewing' => ['label'=>'Phỏng vấn',    'class'=>'badge-primary'],
+                  'rejected'     => ['label'=>'Chưa phù hợp', 'class'=>'badge-danger'],
                 ];
                 $s = $statusConfig[$app->status] ?? ['label'=>$app->status,'class'=>''];
               @endphp

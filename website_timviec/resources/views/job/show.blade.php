@@ -46,26 +46,35 @@
 
           <div class="divider mt-20"></div>
 
-          <div class="flex gap-10">
+          {{-- Apply section --}}
+          @auth
+            @if(auth()->user()->user_type === 'employee' && $existingApplication)
+              @php
+                $sl = \App\Models\Application::STATUS_LABELS[$existingApplication->status] ?? $existingApplication->status;
+                $scMap = ['submitted'=>'#D48806','viewed'=>'var(--primary)','approved'=>'#4338ca','interviewing'=>'#4338ca','rejected'=>'var(--danger)'];
+                $scColor = $scMap[$existingApplication->status] ?? 'var(--text-secondary)';
+              @endphp
+              {{-- Đã nộp: hiện status badge rồi nút bên dưới --}}
+              <div style="background:var(--bg-gray);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div>
+                  <span style="color:var(--text-secondary)"><i class="fas fa-check-circle fa-fw" style="color:var(--primary)"></i> Đã nộp ngày {{ $existingApplication->applied_at->format('d/m/Y') }}</span>
+                  &nbsp;·&nbsp;
+                  <span style="color:{{ $scColor }};font-weight:600">{{ $sl }}</span>
+                </div>
+                <a href="{{ route('candidate.application.detail', $existingApplication->id) }}" class="btn btn-outline btn-sm">
+                  <i class="fas fa-file-alt fa-fw"></i> Xem đơn của tôi
+                </a>
+              </div>
+          @endif
+          @endauth
+
+          <div class="flex gap-10" style="align-items:center">
             @auth
               @if(auth()->user()->user_type === 'employee')
                 @if($existingApplication)
-                  {{-- Đã từng nộp - cho ứng tuyển lại --}}
-                  <div>
-                    <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-outline btn-lg">
-                      <i class="fas fa-redo fa-fw"></i> Ứng tuyển lại
-                    </a>
-                    <div class="fs-12 text-muted mt-8" style="text-align:center">
-                      <i class="fas fa-check-circle fa-fw" style="color:var(--primary)"></i>
-                      Đã nộp ngày {{ $existingApplication->applied_at->format('d/m/Y') }}
-                      &nbsp;·&nbsp;
-                      @php
-                        $sl = \App\Models\Application::STATUS_LABELS[$existingApplication->status] ?? $existingApplication->status;
-                        $sc = ['submitted'=>'var(--warning)','viewed'=>'var(--primary)','interviewing'=>'#5b21b6','accepted'=>'var(--primary)','rejected'=>'var(--danger)'];
-                      @endphp
-                      <span style="color:{{ $sc[$existingApplication->status] ?? 'var(--text-secondary)' }};font-weight:600">{{ $sl }}</span>
-                    </div>
-                  </div>
+                  <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-outline btn-lg">
+                    <i class="fas fa-redo fa-fw"></i> Ứng tuyển lại
+                  </a>
                 @else
                   <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-primary btn-lg">
                     <i class="fas fa-paper-plane fa-fw"></i> Ứng tuyển ngay

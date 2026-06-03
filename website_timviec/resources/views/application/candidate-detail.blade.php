@@ -19,11 +19,11 @@
   {{-- Status banner --}}
   @php
     $statusConfig = [
-      'submitted'    => ['label'=>'Đã nộp',    'bg'=>'#FFF7E6','border'=>'#FAAD14','color'=>'#D48806','icon'=>'fa-paper-plane'],
-      'viewed'       => ['label'=>'Đã xem',    'bg'=>'#E6F4FF','border'=>'#1890FF','color'=>'#096DD9','icon'=>'fa-eye'],
-      'interviewing' => ['label'=>'Phỏng vấn', 'bg'=>'#F0F0FF','border'=>'#6366f1','color'=>'#4338ca','icon'=>'fa-calendar-check'],
-      'accepted'     => ['label'=>'Đã nhận',   'bg'=>'var(--primary-light)','border'=>'var(--primary)','color'=>'var(--primary-dark)','icon'=>'fa-check-circle'],
-      'rejected'     => ['label'=>'Từ chối',   'bg'=>'#FFF2EE','border'=>'var(--danger)','color'=>'var(--danger)','icon'=>'fa-times-circle'],
+      'submitted'    => ['label'=>'Đã nộp',       'bg'=>'#FFF7E6',            'border'=>'#FAAD14',      'color'=>'#D48806',           'icon'=>'fa-paper-plane'],
+      'viewed'       => ['label'=>'Đã xem',       'bg'=>'#E6F4FF',            'border'=>'#1890FF',      'color'=>'#096DD9',           'icon'=>'fa-eye'],
+      'approved'     => ['label'=>'Duyệt hồ sơ',  'bg'=>'#F0F0FF',            'border'=>'#6366f1',      'color'=>'#4338ca',           'icon'=>'fa-thumbs-up'],
+      'interviewing' => ['label'=>'Phỏng vấn',    'bg'=>'var(--primary-light)','border'=>'var(--primary)','color'=>'var(--primary-dark)','icon'=>'fa-calendar-check'],
+      'rejected'     => ['label'=>'Chưa phù hợp', 'bg'=>'#FFF2EE',            'border'=>'var(--danger)', 'color'=>'var(--danger)',     'icon'=>'fa-times-circle'],
     ];
     $s = $statusConfig[$application->status] ?? ['label'=>$application->status,'bg'=>'#f5f5f5','border'=>'var(--border)','color'=>'var(--text-secondary)','icon'=>'fa-circle'];
   @endphp

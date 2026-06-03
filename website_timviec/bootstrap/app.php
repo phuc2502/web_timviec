@@ -19,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'candidate' => \App\Http\Middleware\EnsureCandidate::class,
             'employer'  => \App\Http\Middleware\EnsureEmployer::class,
         ]);
+
+        // Loại trừ VNPay IPN khỏi CSRF verification (server-to-server callback)
+        $middleware->validateCsrfTokens(except: [
+            'payment/token/ipn',
+            'payment/subscription/ipn',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
