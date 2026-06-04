@@ -68,10 +68,19 @@
           @endif
           @endauth
 
-          <div class="flex gap-10" style="align-items:center">
+          <div class="flex gap-10" style="align-items:center;flex-wrap:wrap">
             @auth
               @if(auth()->user()->user_type === 'employee')
-                @if($existingApplication)
+                @if($applicantLimitReached && !$existingApplication)
+                  {{-- Job free đã đủ quota: ẩn nút ứng tuyển --}}
+                  <div style="background:#FFF7E6;border:1.5px solid #FAAD14;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+                    <i class="fas fa-pause-circle" style="color:#D48806;font-size:18px;flex-shrink:0"></i>
+                    <div>
+                      <div class="fw-600 fs-13" style="color:#7C4A00">Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm</div>
+                      <div class="fs-12" style="color:#A36000;margin-top:2px">Nhà tuyển dụng đang xem xét các đơn hiện có.</div>
+                    </div>
+                  </div>
+                @elseif($existingApplication)
                   <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-outline btn-lg">
                     <i class="fas fa-redo fa-fw"></i> Ứng tuyển lại
                   </a>

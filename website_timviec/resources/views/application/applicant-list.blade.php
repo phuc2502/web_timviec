@@ -5,15 +5,46 @@
 @section('content')
 <div class="container section">
 
-  <div class="flex-between mb-24">
+@php
+  $isPremium     = auth()->user()->isPremium();
+  $appCount      = $applications->total();
+  $freeAppLimit  = 3;
+  $limitReached  = !$isPremium && $appCount >= $freeAppLimit;
+@endphp
+
+  <div class="flex-between mb-20">
     <div>
       <h1 class="fw-700 fs-24" style="color:var(--secondary)">👥 Danh sách ứng viên</h1>
-      <p class="text-muted fs-13 mt-8">Xem và quản lý hồ sơ ứng tuyển</p>
+      <p class="text-muted fs-13 mt-8">{{ $listing->title ?? '' }}</p>
     </div>
     <a href="{{ route('job.manage') }}" class="btn btn-outline btn-sm">
       <i class="fas fa-arrow-left fa-fw"></i> Về quản lý việc làm
     </a>
   </div>
+
+  {{-- Banner giới hạn Free --}}
+  @if($limitReached)
+  <div style="background:linear-gradient(135deg,#fff7ed,#fffbeb);border:1.5px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fas fa-crown" style="color:#f59e0b;font-size:18px"></i>
+      </div>
+      <div>
+        <div class="fw-700 fs-14" style="color:#92400e">Đã nhận đủ {{ $freeAppLimit }} hồ sơ — Giới hạn tài khoản Free</div>
+        <div class="fs-12" style="color:#b45309;margin-top:3px">Nâng cấp Premium để nhận không giới hạn ứng viên và mở khóa đầy đủ tính năng quản lý.</div>
+      </div>
+    </div>
+    <a href="{{ route('payment.subscription') }}" class="btn btn-sm" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;white-space:nowrap;flex-shrink:0">
+      <i class="fas fa-crown"></i> Nâng cấp Premium
+    </a>
+  </div>
+  @elseif(!$isPremium)
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
+    <i class="fas fa-info-circle" style="color:#16a34a;font-size:15px"></i>
+    <span class="fs-13" style="color:#15803d">Tài khoản Free — Đã nhận <strong>{{ $appCount }}/{{ $freeAppLimit }}</strong> ứng viên cho tin này.</span>
+    <a href="{{ route('payment.subscription') }}" class="fs-12 fw-600" style="color:#16a34a;margin-left:auto;white-space:nowrap"><i class="fas fa-crown"></i> Nâng cấp không giới hạn</a>
+  </div>
+  @endif
 
   @if($applications->isEmpty())
     <div class="card">

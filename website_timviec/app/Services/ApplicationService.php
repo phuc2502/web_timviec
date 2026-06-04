@@ -32,11 +32,23 @@ class ApplicationService
     public function apply(User $candidate, array $data): Application
     {
         // ── 1. Kiểm tra công việc ─────────────────────────────────────────
-        $listing = Listing::findOrFail($data['listing_id']);
+        $listing = Listing::with('user')->findOrFail($data['listing_id']);
 
         // Kiểm tra hết hạn
         if ($listing->application_close_date && now()->gt($listing->application_close_date)) {
             throw new \RuntimeException('Công việc đã hết hạn hoặc đã đóng tuyển dụng.');
+        }
+
+        // ── 1b. Kiểm tra giới hạn ứng viên cho tài khoản Free ─────────────
+        $isReapply = Application::where('user_id', $candidate->id)
+                                 ->where('listing_id', $listing->id)
+                                 ->exists();
+
+        if (!$isReapply && !$listing->user->isPremium()) {
+            $applicantCount = Application::where('listing_id', $listing->id)->count();
+            if ($applicantCount >= 3) {
+                throw new \RuntimeException('__FREE_LIMIT__:' . $listing->id);
+            }
         }
 
         // ── 2. Kiểm tra lượt ứng tuyển ────────────────────────────────────
@@ -55,44 +67,61 @@ class ApplicationService
                                     ->where('listing_id', $listing->id)
                                     ->first();
 
+            // Snapshot thông tin liên hệ tại thời điểm nộp đơn
+            $contactSnapshot = [
+                'applicant_name'  => $data['fullname']  ?? $candidate->name,
+                'applicant_phone' => $data['phone']      ?? $candidate->phone,
+                'applicant_email' => $data['email']      ?? $candidate->email,
+            ];
+
+            // ── 5. Lưu / cập nhật đơn ứng tuyển ──────────────────────────
             if ($existing) {
-                // Ứng tuyển lại: cập nhật bản ghi cũ, KHÔNG trừ thêm token
-                $existing->update([
+                // Ứng tuyển lại: cập nhật bản ghi cũ
+                $existing->update(array_merge([
                     'cv_id'        => $cvId,
                     'cover_letter' => $data['cover_letter'] ?? null,
                     'status'       => 'submitted',
                     'applied_at'   => now('Asia/Ho_Chi_Minh'),
-                ]);
-                return $existing->fresh();
+                ], $contactSnapshot));
+                $application = $existing->fresh();
+            } else {
+                $application = Application::create(array_merge([
+                    'user_id'      => $candidate->id,
+                    'listing_id'   => $listing->id,
+                    'cv_id'        => $cvId,
+                    'cover_letter' => $data['cover_letter'] ?? null,
+                    'status'       => 'submitted',
+                    'applied_at'   => now('Asia/Ho_Chi_Minh'),
+                ], $contactSnapshot));
             }
 
-            // ── 5. Insert đơn mới ──────────────────────────────────────────
-            $application = Application::create([
-                'user_id'      => $candidate->id,
-                'listing_id'   => $listing->id,
-                'cv_id'        => $cvId,
-                'cover_letter' => $data['cover_letter'] ?? null,
-                'status'       => 'submitted',
-                'applied_at'   => now('Asia/Ho_Chi_Minh'),
-            ]);
-
-            // ── 6. Trừ 1 lượt ứng tuyển ───────────────────────────────────
+            // ── 6. Trừ 1 lượt — áp dụng cho cả apply mới LẪN re-apply ────
             $tokenRecord->decrement('balance');
 
-            Log::info("Application created: user={$candidate->id}, listing={$listing->id}, balance_after={$tokenRecord->balance}");
+            Log::info("Application saved: user={$candidate->id}, listing={$listing->id}, reapply=" . ($existing ? 'yes' : 'no') . ", balance_after={$tokenRecord->balance}");
 
             return $application;
         });
     }
 
     /**
-     * Tự động gợi ý CV gần nhất của ứng viên.
+     * Lấy CV từ lần ứng tuyển gần nhất trong toàn hệ thống (Global Last-Used CV).
+     * Đây là Single Source of Truth — cùng bản ghi mà NTD nhìn thấy.
      */
     public function suggestLatestCv(User $candidate): ?Cv
     {
-        return Cv::where('user_id', $candidate->id)
-                  ->latest()
-                  ->first();
+        $latestApplication = Application::with('cv')
+            ->where('user_id', $candidate->id)
+            ->whereNotNull('cv_id')
+            ->orderByDesc('applied_at')
+            ->first();
+
+        if ($latestApplication && $latestApplication->cv) {
+            return $latestApplication->cv;
+        }
+
+        // Fallback: CV upload gần nhất (chưa ứng tuyển lần nào)
+        return Cv::where('user_id', $candidate->id)->latest()->first();
     }
 
     /**
@@ -135,10 +164,15 @@ class ApplicationService
             ->findOrFail($applicationId);
 
         if ($application->status === 'submitted') {
+            $oldStatus = $application->status;
             $application->update([
                 'status'            => 'viewed',
                 'status_updated_at' => now('Asia/Ho_Chi_Minh'),
             ]);
+            $fresh = $application->fresh(['user', 'cv', 'listing']);
+            // Gửi in-app notification cho ứng viên khi NTD xem hồ sơ
+            $this->createStatusNotification($fresh, $oldStatus);
+            return $fresh;
         }
 
         return $application->fresh(['user', 'cv', 'listing']);

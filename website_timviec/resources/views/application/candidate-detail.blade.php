@@ -79,6 +79,25 @@
       </div>
     </div>
 
+    {{-- Thông tin liên hệ đã nộp --}}
+    @if($application->applicant_name || $application->applicant_phone)
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <span class="fw-700">📋 Thông tin đã gửi đến nhà tuyển dụng</span>
+        <span style="font-size:11px;color:var(--text-secondary)">Cập nhật {{ $application->applied_at->format('d/m/Y') }}</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+          <div><div class="text-muted fs-12 mb-6">Họ tên đã nộp</div><div class="fw-600">{{ $application->applicant_name ?: auth()->user()->name }}</div></div>
+          <div><div class="text-muted fs-12 mb-6">Email đã nộp</div><div>{{ $application->applicant_email ?: auth()->user()->email }}</div></div>
+          @if($application->applicant_phone)
+          <div><div class="text-muted fs-12 mb-6">Số điện thoại</div><div>{{ $application->applicant_phone }}</div></div>
+          @endif
+        </div>
+      </div>
+    </div>
+    @endif
+
     {{-- CV đã nộp --}}
     @if($application->cv)
       <div class="card">

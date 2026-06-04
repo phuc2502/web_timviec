@@ -15,15 +15,33 @@
   @endif
 
   @if($status['has_active'])
-    <div class="alert alert-success mb-24" style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <strong><i class="fas fa-check-circle fa-fw"></i> Đang dùng gói: {{ ucfirst($status['plan']) }}</strong>
-        <div class="fs-13 mt-8">Hết hạn: <strong>{{ $status['billing_ends'] }}</strong> · Còn <strong>{{ $status['days_remaining'] }} ngày</strong></div>
+    {{-- Banner cố định — không biến mất — khi đã có gói active --}}
+    <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #16a34a;border-radius:14px;padding:20px 24px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:48px;height:48px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fas fa-crown" style="color:#fff;font-size:20px"></i>
+        </div>
+        <div>
+          <div class="fw-700 fs-15" style="color:#14532d">
+            <i class="fas fa-check-circle fa-fw" style="color:#16a34a"></i>
+            Đang sử dụng gói <span style="text-transform:capitalize">{{ $status['plan'] }}</span>
+          </div>
+          <div class="fs-13" style="color:#166534;margin-top:4px">
+            Hết hạn: <strong>{{ $status['billing_ends'] }}</strong>
+            &nbsp;·&nbsp;
+            Còn <strong style="color:#15803d">{{ $status['days_remaining'] }} ngày</strong>
+          </div>
+        </div>
       </div>
-      <a href="{{ route('employer.subscription.status') }}" class="btn btn-outline btn-sm">Xem chi tiết</a>
+      <a href="{{ route('employer.subscription.status') }}"
+         class="btn btn-sm fw-600"
+         style="background:#16a34a;color:#fff;border:none;white-space:nowrap;flex-shrink:0">
+        <i class="fas fa-chart-bar fa-fw"></i> Xem chi tiết
+      </a>
     </div>
-    <div class="alert alert-warning mb-24">
-      <i class="fas fa-info-circle fa-fw"></i> Bạn đang có gói đang hoạt động. Chỉ có thể mua gói mới sau khi hết hạn.
+    <div style="background:#fefce8;border:1.5px solid #fbbf24;border-radius:10px;padding:12px 16px;margin-bottom:24px;display:flex;align-items:center;gap:10px">
+      <i class="fas fa-info-circle" style="color:#d97706;font-size:15px;flex-shrink:0"></i>
+      <span class="fs-13" style="color:#92400e">Bạn đang có gói đang hoạt động. Có thể mua gia hạn sau khi gói hiện tại hết hạn.</span>
     </div>
   @endif
 

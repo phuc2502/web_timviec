@@ -115,12 +115,24 @@ class User extends Authenticatable
 
     // ─── Premium Helpers ───────────────────────────────────────────────────
 
+    public function activeSubscription()
+    {
+        return $this->subscriptions()
+            ->where('status', 'active')
+            ->where('billing_ends', '>', now())
+            ->latest('billing_ends');
+    }
+
     /**
      * Kiểm tra employer có đang trong gói Premium không.
+     * Source of truth: bảng subscriptions (KHÔNG dùng billing_ends trên users).
      */
     public function isPremium(): bool
     {
-        return !empty($this->billing_ends) && $this->billing_ends->isFuture();
+        return $this->subscriptions()
+            ->where('status', 'active')
+            ->where('billing_ends', '>', now())
+            ->exists();
     }
 
     /**
