@@ -5,25 +5,24 @@
 @section('content')
 
 {{-- HERO --}}
-<section class="hero">
+<section class="hero-section">
   <div class="container">
     <div style="max-width:700px">
-      <h1>Nền tảng tuyển dụng IT<br><span style="color:#7effc4">hàng đầu Việt Nam</span></h1>
+      <h1>Nền tảng tuyển dụng IT<br><span style="color:var(--primary)">hàng đầu Việt Nam</span></h1>
       <p>Kết nối <strong>{{ $totalJobs ?? '2,500+' }}</strong> việc làm IT với hàng nghìn kỹ sư công nghệ xuất sắc</p>
 
       {{-- Search bar --}}
       <form action="{{ url('/job') }}" method="GET">
-        <div class="search-bar">
-          <input type="text" name="search" value="{{ request('search') }}" placeholder="🔍 Tìm việc: Backend, Frontend, DevOps...">
-          <div class="search-bar__divider"></div>
-          <select name="address" style="padding:14px 14px;border:none;font-size:14px;font-family:inherit;color:var(--text-secondary);background:transparent;cursor:pointer;min-width:150px">
+        <div class="search-box">
+          <input type="text" name="keyword" class="search-input" value="{{ request('keyword') }}" placeholder="🔍 Tìm việc: Backend, Frontend, DevOps...">
+          <select name="address" class="select-box" style="min-width:150px">
             <option value="">📍 Tất cả địa điểm</option>
             <option value="Hà Nội" {{ request('address') == 'Hà Nội' ? 'selected' : '' }}>Hà Nội</option>
             <option value="Hồ Chí Minh" {{ request('address') == 'Hồ Chí Minh' ? 'selected' : '' }}>Hồ Chí Minh</option>
             <option value="Đà Nẵng" {{ request('address') == 'Đà Nẵng' ? 'selected' : '' }}>Đà Nẵng</option>
             <option value="Remote" {{ request('address') == 'Remote' ? 'selected' : '' }}>Remote</option>
           </select>
-          <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+          <button type="submit" class="btn btn-primary" style="border-radius: var(--radius-md)">Tìm kiếm</button>
         </div>
       </form>
 
@@ -40,7 +39,7 @@
 <div style="background:#fff;border-bottom:1px solid var(--border)">
   <div class="container" style="padding:14px 16px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
     @foreach(['Backend', 'Frontend', 'Mobile', 'DevOps', 'Data / AI', 'QA/Tester', 'UI/UX', 'Blockchain', 'Game'] as $cat)
-      <a href="{{ url('/job?search='.urlencode($cat)) }}" class="tag {{ request('search') == $cat ? 'tag-green' : 'tag-gray' }}" style="white-space:nowrap;font-size:13px;padding:6px 14px">
+      <a href="{{ url('/job?keyword='.urlencode($cat)) }}" class="tag {{ request('keyword') == $cat ? 'tag-green' : 'tag-gray' }}" style="white-space:nowrap;font-size:13px;padding:6px 14px">
         {{ $cat }}
       </a>
     @endforeach
@@ -54,7 +53,7 @@
     {{-- SIDEBAR FILTER --}}
     <aside class="sidebar" style="display:none" id="sidebar">
       <form action="{{ url('/job') }}" method="GET">
-        <input type="hidden" name="search" value="{{ request('search') }}">
+        <input type="hidden" name="keyword" value="{{ request('keyword') }}">
 
         <div class="sidebar-card">
           <div class="sidebar-card__title"><i class="fas fa-filter" style="color:var(--primary);margin-right:6px"></i>Lọc kết quả</div>
