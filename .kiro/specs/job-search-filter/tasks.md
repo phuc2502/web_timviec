@@ -39,27 +39,27 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Implement relationship `listings()`: `BelongsToMany` → `Listing` via `listing_skill`
     - _Requirements: 4.7, 16.2_
 
-- [ ] 3. Tạo Service Layer
-  - [ ] 3.1 Tạo `ListingSearchService` — skeleton và `getSkills()` / `getCities()`
+- [x] 3. Tạo Service Layer
+  - [x] 3.1 Tạo `ListingSearchService` — skeleton và `getSkills()` / `getCities()`
     - Tạo thư mục `app/Services/` và file `app/Services/ListingSearchService.php`
     - Implement `getSkills()`: trả về `Skill::all()` dưới dạng Collection
     - Implement `getCities()`: trả về mảng string — `address` distinct từ Active_Listing, sắp xếp alphabet (`Listing::active()->distinct()->orderBy('address')->pluck('address')->toArray()`)
     - _Requirements: 4.7, 5.4, 16.2, 16.3_
 
-  - [ ] 3.2 Implement `applyKeywordFilter` trong `ListingSearchService`
+  - [x] 3.2 Implement `applyKeywordFilter` trong `ListingSearchService`
     - Thêm private method `applyKeywordFilter(Builder $query, string $keyword): Builder`
     - Dùng `selectRaw('listings.*, MATCH(title, predes) AGAINST(? IN NATURAL LANGUAGE MODE) AS relevance_score', [$keyword])`
     - Thêm `whereRaw('MATCH(title, predes) AGAINST(? IN NATURAL LANGUAGE MODE) > 0', [$keyword])`
     - _Requirements: 1.1, 1.2, 1.5, 14.1_
 
-  - [ ] 3.3 Implement `applySkillFilter` trong `ListingSearchService`
+  - [x] 3.3 Implement `applySkillFilter` trong `ListingSearchService`
     - Thêm private method `applySkillFilter(Builder $query, array $skillIds, string $mode): Builder`
     - Bước 1: validate IDs — `$validIds = Skill::whereIn('id', $skillIds)->pluck('id')->toArray()`; nếu rỗng thì return `$query` không đổi
     - AND mode: dùng `whereIn` với subquery `SELECT listing_id FROM listing_skill WHERE skill_id IN (...) GROUP BY listing_id HAVING COUNT(DISTINCT skill_id) = N`
     - OR mode: dùng `whereHas('skills', fn($q) => $q->whereIn('skills.id', $validIds))`
     - _Requirements: 4.1, 4.2, 4.4, 4.5_
 
-  - [ ] 3.4 Implement `applyExperienceFilter` và `applySalaryFilter` trong `ListingSearchService`
+  - [x] 3.4 Implement `applyExperienceFilter` và `applySalaryFilter` trong `ListingSearchService`
     - Thêm private method `applyExperienceFilter(Builder $query, ?int $expMin, ?int $expMax): Builder`
       - Intersection logic: nếu `$expMin` không null → `WHERE (experience_years_max >= $expMin OR experience_years_max IS NULL)`
       - Nếu `$expMax` không null → `WHERE (experience_years_min <= $expMax OR experience_years_min IS NULL)`
@@ -70,7 +70,7 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
       - Áp dụng `salary <= $salaryMax` nếu `$salaryMax > 0`
     - _Requirements: 6.1, 6.2, 6.3, 6.5, 7.1, 7.2, 7.3, 7.5_
 
-  - [ ] 3.5 Implement `applySort` và method `search()` chính trong `ListingSearchService`
+  - [x] 3.5 Implement `applySort` và method `search()` chính trong `ListingSearchService`
     - Thêm private method `applySort(Builder $query, string $sort, bool $hasKeyword): Builder`
       - `relevance`: `orderByDesc('relevance_score')` — fallback về `newest` nếu `!$hasKeyword`
       - `newest`: `orderByDesc('created_at')`
@@ -85,8 +85,8 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
       - Trả về `$query->paginate($perPage)->appends($filters)`
     - _Requirements: 1.3, 1.4, 10.1, 10.2, 10.3, 10.4, 11.1, 11.2, 11.3, 11.4, 11.5, 14.2, 14.3_
 
-- [ ] 4. Tạo HTTP Layer
-  - [ ] 4.1 Tạo `SearchFilterRequest`
+- [x] 4. Tạo HTTP Layer
+  - [x] 4.1 Tạo `SearchFilterRequest`
     - Tạo file `app/Http/Requests/SearchFilterRequest.php`
     - Implement `authorize()`: trả về `true`
     - Implement `rules()` với đầy đủ 17 params:
@@ -109,12 +109,12 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Implement `prepareForValidation()`: trim keyword, cắt keyword/address/city xuống 255 ký tự, set default `skill_mode = 'and'`
     - _Requirements: 15.1–15.12, 6.4, 7.4_
 
-  - [ ] 4.2 Tạo `SkillResource`
+  - [x] 4.2 Tạo `SkillResource`
     - Tạo file `app/Http/Resources/SkillResource.php`
     - Implement `toArray()`: trả về `['id', 'name', 'slug']`
     - _Requirements: 4.7, 13.3, 16.2_
 
-  - [ ] 4.3 Tạo `ListingResource`
+  - [x] 4.3 Tạo `ListingResource`
     - Tạo file `app/Http/Resources/ListingResource.php`
     - Implement `toArray()` với đầy đủ các trường theo design: `id`, `title`, `slug`, `predes_truncated`, `job_type`, `work_mode`, `job_level`, `address`, `salary`, `salary_display`, `experience_years_min`, `experience_years_max`, `experience_display`, `application_close_date`, `created_at`
     - Implement nested `employer` object: `company_name`, `company_logo`, `company_size`
@@ -126,7 +126,7 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Đảm bảo tất cả nullable fields trả về `null` (không phải `""`)
     - _Requirements: 13.1–13.7_
 
-  - [ ] 4.4 Tạo `ListingController`
+  - [x] 4.4 Tạo `ListingController`
     - Tạo file `app/Http/Controllers/ListingController.php`
     - Inject `ListingSearchService` qua constructor
     - Implement `index(SearchFilterRequest $request): JsonResponse` — gọi `$this->service->search($request->validated())`, trả về `ListingResource::collection($results)->response()`
@@ -134,8 +134,8 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Implement `cities(): JsonResponse` — gọi `$this->service->getCities()`, trả về `response()->json(...)`
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.7_
 
-- [ ] 5. Đăng ký Routes
-  - [ ] 5.1 Thêm 3 routes vào `routes/api.php`
+- [x] 5. Đăng ký Routes
+  - [x] 5.1 Thêm 3 routes vào `routes/api.php`
     - Tạo file `routes/api.php` nếu chưa có (Laravel 11 cần đăng ký trong `bootstrap/app.php`)
     - Thêm: `Route::get('/listings/search', [ListingController::class, 'index'])`
     - Thêm: `Route::get('/listings/cities', [ListingController::class, 'cities'])`
@@ -143,11 +143,11 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Đảm bảo import đúng namespace `App\Http\Controllers\ListingController`
     - _Requirements: 16.1, 16.2, 16.3, 16.6_
 
-- [ ] 6. Checkpoint — Kiểm tra tích hợp cơ bản
+- [x] 6. Checkpoint — Kiểm tra tích hợp cơ bản
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Viết Tests
-  - [ ] 7.1 Viết Unit Tests cho `ListingSearchService`
+- [x] 7. Viết Tests
+  - [x] 7.1 Viết Unit Tests cho `ListingSearchService`
     - Tạo file `tests/Unit/ListingSearchServiceTest.php`
     - Test `applyKeywordFilter`: FULLTEXT query được thêm khi có keyword; không thêm khi keyword rỗng
     - Test `applySkillFilter` AND mode: subquery HAVING COUNT = N; bỏ qua invalid skill IDs; trả về query không đổi khi tất cả IDs không hợp lệ
@@ -189,7 +189,7 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Với mọi Search_Request có `skills = [s1, ..., sN]` và `skill_mode = 'and'`, mọi Listing trong Result_Set phải có liên kết với tất cả N skill IDs hợp lệ trong bảng `listing_skill`
     - **Validates: Requirements 4.1, 4.4**
 
-  - [ ] 7.8 Viết Feature Tests cho 3 API endpoints
+  - [x] 7.8 Viết Feature Tests cho 3 API endpoints
     - Tạo file `tests/Feature/ListingSearchApiTest.php`
     - Test `GET /api/listings/search`:
       - Chỉ trả về listing có `status = 'open'` và `application_close_date >= today`
@@ -206,7 +206,7 @@ Triển khai module tìm kiếm và lọc tin tuyển dụng IT theo kiến trú
     - Test `GET /api/listings/cities`: trả về distinct addresses sắp xếp alphabet, HTTP 405 cho POST
     - _Requirements: 16.1–16.7, 10.5, 10.6_
 
-- [ ] 8. Final Checkpoint — Đảm bảo tất cả tests pass
+- [x] 8. Final Checkpoint — Đảm bảo tất cả tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
