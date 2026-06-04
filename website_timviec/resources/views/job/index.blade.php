@@ -91,7 +91,7 @@
               @endforeach
             </div>
             <button type="submit" class="btn btn-primary btn-block mt-12">Áp dụng</button>
-            <a href="{{ url('/') }}" class="btn btn-outline btn-block mt-8" style="font-size:13px">Xoá lọc</a>
+            <a href="{{ url('/job') }}" class="btn btn-outline btn-block mt-8" style="font-size:13px">Xoá tất cả bộ lọc</a>
           </div>
         </div>
       </form>
@@ -106,11 +106,17 @@
         </div>
         <div class="flex gap-8">
           <select class="form-control" style="width:auto;padding:6px 12px;font-size:13px" onchange="location=this.value">
-            <option value="{{ request()->fullUrlWithQuery(['sort' => 'newest']) }}" {{ request('sort') == 'newest' || !request('sort') ? 'selected' : '' }}>Mới nhất</option>
+            <option value="{{ url('/job') . (request('keyword') ? '?keyword='.urlencode(request('keyword')) : '') }}" {{ !request('sort') ? 'selected' : '' }}>Mặc định (mới nhất)</option>
+            <option value="{{ request()->fullUrlWithQuery(['sort' => 'newest']) }}" {{ request('sort') == 'newest' ? 'selected' : '' }}>Mới nhất</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'salary_desc']) }}" {{ request('sort') == 'salary_desc' ? 'selected' : '' }}>Lương cao nhất</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'salary_asc']) }}" {{ request('sort') == 'salary_asc' ? 'selected' : '' }}>Lương thấp nhất</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'closing_soon']) }}" {{ request('sort') == 'closing_soon' ? 'selected' : '' }}>Hạn nộp gần nhất</option>
           </select>
+          @if(request()->hasAny(['keyword','job_type','salary_range','address','sort']))
+            <a href="{{ url('/job') }}" class="btn btn-outline btn-sm" title="Xóa tất cả bộ lọc" style="white-space:nowrap">
+              <i class="fas fa-times"></i> Xóa lọc
+            </a>
+          @endif
           <button onclick="document.getElementById('sidebar').style.display=document.getElementById('sidebar').style.display==='none'?'block':'none'" class="btn btn-outline btn-sm"><i class="fas fa-filter"></i> Lọc</button>
         </div>
       </div>
@@ -164,7 +170,7 @@
           <div style="font-size:48px;margin-bottom:12px">🔍</div>
           <div class="fw-700 fs-16">Không tìm thấy việc làm nào</div>
           <p class="text-muted mt-8 fs-13">Thử tìm với từ khóa khác hoặc xoá bộ lọc</p>
-          <a href="{{ url('/') }}" class="btn btn-primary mt-16" style="display:inline-flex">Xem tất cả việc làm</a>
+          <a href="{{ url('/job') }}" class="btn btn-primary mt-16" style="display:inline-flex">Xem tất cả việc làm</a>
         </div>
       @endforelse
 
