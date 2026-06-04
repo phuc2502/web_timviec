@@ -29,13 +29,42 @@
     <div style="display:flex;flex-direction:column;gap:16px">
 
       <div class="card">
-        <div class="card-header"><span class="fw-700">👤 Thông tin ứng viên</span></div>
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <span class="fw-700">👤 Thông tin ứng viên</span>
+          @if($application->applicant_name)
+            <span style="background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">
+              <i class="fas fa-sync-alt fa-fw"></i> Thông tin mới nhất
+            </span>
+          @endif
+        </div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:13px">
-            <div><div class="text-muted fs-12 mb-8">Họ tên</div><div class="fw-600">{{ $application->user->name }}</div></div>
-            <div><div class="text-muted fs-12 mb-8">Email</div><div>{{ $application->user->email }}</div></div>
-            <div><div class="text-muted fs-12 mb-8">Vị trí ứng tuyển</div><div class="fw-600" style="color:var(--primary)">{{ $application->listing->title }}</div></div>
-            <div><div class="text-muted fs-12 mb-8">Ngày nộp</div><div>{{ $application->applied_at->format('d/m/Y H:i') }}</div></div>
+            <div>
+              <div class="text-muted fs-12 mb-8">Họ tên</div>
+              <div class="fw-600">{{ $application->applicant_name ?: $application->user->name }}</div>
+            </div>
+            <div>
+              <div class="text-muted fs-12 mb-8">Email liên hệ</div>
+              <div><a href="mailto:{{ $application->applicant_email ?: $application->user->email }}" style="color:var(--primary)">{{ $application->applicant_email ?: $application->user->email }}</a></div>
+            </div>
+            <div>
+              <div class="text-muted fs-12 mb-8">Số điện thoại</div>
+              <div>
+                @if($application->applicant_phone)
+                  <a href="tel:{{ $application->applicant_phone }}" style="color:var(--primary)">{{ $application->applicant_phone }}</a>
+                @else
+                  <span class="text-muted">—</span>
+                @endif
+              </div>
+            </div>
+            <div>
+              <div class="text-muted fs-12 mb-8">Vị trí ứng tuyển</div>
+              <div class="fw-600" style="color:var(--primary)">{{ $application->listing->title }}</div>
+            </div>
+            <div>
+              <div class="text-muted fs-12 mb-8">Ngày nộp</div>
+              <div>{{ $application->applied_at->format('d/m/Y H:i') }}</div>
+            </div>
           </div>
         </div>
       </div>

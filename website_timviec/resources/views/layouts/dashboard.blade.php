@@ -19,7 +19,7 @@
       <a href="{{ url('/') }}" class="btn btn-outline btn-sm"><i class="fas fa-home"></i> Trang chủ</a>
       <div style="position:relative;cursor:pointer" onclick="toggleDropdown()">
         @if(auth()->user()->profile_pic)
-          <img src="{{ auth()->user()->avatar_url }}" class="avatar avatar-sm" alt="">
+          <img src="{{ asset('storage/images/'.auth()->user()->profile_pic) }}" class="avatar avatar-sm" alt="">
         @else
           <div class="avatar avatar-sm avatar-placeholder" style="font-size:13px;background:var(--primary-light);color:var(--primary)">
             {{ strtoupper(substr(auth()->user()->name,0,1)) }}
@@ -50,7 +50,7 @@
   <aside class="dash-sidebar">
     <div style="padding:16px;text-align:center;border-bottom:1px solid var(--border)">
       @if(auth()->user()->profile_pic)
-        <img src="{{ auth()->user()->avatar_url }}" class="avatar avatar-lg" style="margin:0 auto 8px" alt="">
+        <img src="{{ asset('storage/images/'.auth()->user()->profile_pic) }}" class="avatar avatar-lg" style="margin:0 auto 8px" alt="">
       @else
         <div class="avatar avatar-lg avatar-placeholder" style="margin:0 auto 8px;font-size:24px;background:var(--primary-light);color:var(--primary)">
           {{ strtoupper(substr(auth()->user()->name,0,1)) }}
@@ -72,32 +72,29 @@
     </div>
 
     <nav class="dash-nav" style="margin-top:8px">
-
       @if(auth()->user()->user_type === 'employer')
-        {{-- ===== DANH MỤC: NHÀ TUYỂN DỤNG ===== --}}
-        <div class="dash-nav__section">Tuyển dụng</div>
+        <div class="dash-nav__section">Tổng quan</div>
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">
-          <i class="fas fa-chart-pie fa-fw"></i> Thống kê tuyển dụng
+          <i class="fas fa-chart-bar fa-fw"></i> Dashboard
         </a>
-        <a href="{{ url('/job/manage') }}" class="{{ request()->is('job/manage') || request()->is('job/create') || request()->is('job/edit*') ? 'active' : '' }}">
-          <i class="fas fa-clipboard-list fa-fw"></i> Quản lý Tin tuyển dụng
+        <div class="dash-nav__section">Tuyển dụng</div>
+        <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">
+          <i class="fas fa-briefcase fa-fw"></i> Tin đăng của tôi
         </a>
-        <a href="{{ url('/applicants') }}" class="{{ request()->is('applicants*') ? 'active' : '' }}">
-          <i class="fas fa-user-tie fa-fw"></i> Quản lý Ứng viên
+        <a href="{{ url('/job/create') }}" class="{{ request()->is('job/create') ? 'active' : '' }}">
+          <i class="fas fa-plus-circle fa-fw"></i> Đăng tin mới
+        </a>
+        <a href="{{ url('/applicants') }}" class="{{ request()->is('applicants') ? 'active' : '' }}">
+          <i class="fas fa-users fa-fw"></i> Ứng viên
         </a>
         <div class="dash-nav__section">Tài khoản</div>
-        <a href="{{ url('/subscribe') }}" class="{{ request()->is('subscribe') ? 'active' : '' }}">
-          <i class="fas fa-crown fa-fw"></i> Nâng cấp tài khoản
+        <a href="{{ route('payment.subscription') }}" class="{{ request()->is('payment/subscription') ? 'active' : '' }}">
+          <i class="fas fa-crown fa-fw"></i> Gói premium
         </a>
         <a href="{{ url('/messages') }}" class="{{ request()->is('messages*') ? 'active' : '' }}">
           <i class="fas fa-comment-dots fa-fw"></i> Tin nhắn
         </a>
-        <a href="{{ url('/user/profile') }}" class="{{ request()->is('user/profile') ? 'active' : '' }}">
-          <i class="fas fa-building fa-fw"></i> Hồ sơ công ty
-        </a>
-
       @elseif(auth()->user()->user_type === 'admin')
-        {{-- ===== DANH MỤC: ADMIN ===== --}}
         <div class="dash-nav__section">Tổng quan</div>
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">
           <i class="fas fa-home fa-fw"></i> Dashboard Admin
@@ -109,35 +106,29 @@
         <a href="{{ url('/admin/users') }}" style="color:#ef4444; font-weight:700;">
           <i class="fas fa-users fa-fw"></i> Quản lý & Phân quyền
         </a>
-
       @else
-        {{-- ===== DANH MỤC: ỨNG VIÊN ===== --}}
-        <div class="dash-nav__section">Cá nhân</div>
+        <div class="dash-nav__section">Của tôi</div>
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">
-          <i class="fas fa-th-large fa-fw"></i> Tổng quan cá nhân
+          <i class="fas fa-home fa-fw"></i> Tổng quan
         </a>
-        <a href="{{ url('/user/cv') }}" class="{{ request()->is('user/cv') || request()->is('user/cv/create') ? 'active' : '' }}">
-          <i class="fas fa-folder-open fa-fw"></i> Quản lý CV &amp; Hồ sơ
-        </a>
-        <a href="{{ url('/applicants') }}" class="{{ request()->is('applicants*') ? 'active' : '' }}">
-          <i class="fas fa-tasks fa-fw"></i> Theo dõi ứng tuyển
-        </a>
-        <div class="dash-nav__section">Khám phá</div>
-        <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">
-          <i class="fas fa-search fa-fw"></i> Khám phá việc làm
-        </a>
-        <div class="dash-nav__section">Tài khoản</div>
-        <a href="{{ url('/subscribe') }}" class="{{ request()->is('subscribe') ? 'active' : '' }}">
-          <i class="fas fa-crown fa-fw"></i> Nâng cấp tài khoản
+        <a href="{{ url('/applicants') }}" class="{{ request()->is('applicants') ? 'active' : '' }}">
+          <i class="fas fa-file-alt fa-fw"></i> Việc đã ứng tuyển
         </a>
         <a href="{{ url('/messages') }}" class="{{ request()->is('messages*') ? 'active' : '' }}">
           <i class="fas fa-comment-dots fa-fw"></i> Tin nhắn
         </a>
-        <a href="{{ url('/user/profile') }}" class="{{ request()->is('user/profile') ? 'active' : '' }}">
-          <i class="fas fa-user-cog fa-fw"></i> Thông tin cá nhân
+        <div class="dash-nav__section">Hồ sơ</div>
+        <a href="{{ url('/user/cv') }}" class="{{ request()->is('user/cv') ? 'active' : '' }}">
+          <i class="fas fa-upload fa-fw"></i> Upload CV
+        </a>
+        <a href="{{ url('/user/cv/create') }}" class="{{ request()->is('user/cv/create') ? 'active' : '' }}">
+          <i class="fas fa-magic fa-fw"></i> Tạo CV online
         </a>
       @endif
-
+      <div class="dash-nav__section">Cài đặt</div>
+      <a href="{{ url('/user/profile') }}" class="{{ request()->is('user/profile') ? 'active' : '' }}">
+        <i class="fas fa-user-cog fa-fw"></i> Thông tin cá nhân
+      </a>
     </nav>
   </aside>
 
@@ -172,5 +163,34 @@ document.addEventListener('click', function(e) {
 });
 </script>
 @stack('scripts')
+
+@if(session('show_welcome_modal'))
+<div id="welcome-modal" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:44px 40px;max-width:500px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.18)">
+    <div style="font-size:52px;margin-bottom:16px">🎉</div>
+    <h2 class="fw-800 fs-22" style="color:#1a1a1a;margin-bottom:12px">Chào mừng bạn đến với ITWorks!</h2>
+    <p class="fs-14 text-muted" style="line-height:1.75;margin-bottom:24px">
+      Tài khoản nhà tuyển dụng của bạn đã được tạo thành công.<br><br>
+      Với tài khoản <strong>Free</strong>, bạn có thể đăng tối đa <strong>3 tin tuyển dụng/tháng</strong>.
+      Nâng cấp <strong>Premium</strong> để đăng không giới hạn và tiếp cận nhiều ứng viên hơn!
+    </p>
+    <div style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;text-align:left">
+      <div class="fw-700 fs-13" style="margin-bottom:12px;color:#333">✨ Premium bao gồm:</div>
+      <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px">
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Đăng tin không giới hạn mỗi tháng</li>
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Hiển thị ưu tiên top danh sách</li>
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Thống kê ứng viên nâng cao</li>
+        <li class="fs-13" style="color:#555"><i class="fas fa-check" style="color:#00B14F;margin-right:8px"></i>Badge "Premium" trên mỗi tin đăng</li>
+      </ul>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="document.getElementById('welcome-modal').style.display='none'" class="btn btn-outline">Dùng miễn phí trước</button>
+      <a href="{{ route('payment.subscription') }}" class="btn btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+        <i class="fas fa-crown"></i> Xem gói Premium
+      </a>
+    </div>
+  </div>
+</div>
+@endif
 </body>
 </html>

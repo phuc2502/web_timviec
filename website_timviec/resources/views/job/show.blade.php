@@ -46,25 +46,53 @@
 
           <div class="divider mt-20"></div>
 
-          <div class="flex gap-10">
+          {{-- Apply section --}}
+          @auth
+            @if(auth()->user()->user_type === 'employee' && $existingApplication)
+              @php
+                $sl = \App\Models\Application::STATUS_LABELS[$existingApplication->status] ?? $existingApplication->status;
+                $scMap = ['submitted'=>'#D48806','viewed'=>'var(--primary)','approved'=>'#4338ca','interviewing'=>'#4338ca','rejected'=>'var(--danger)'];
+                $scColor = $scMap[$existingApplication->status] ?? 'var(--text-secondary)';
+              @endphp
+              {{-- Đã nộp: hiện status badge rồi nút bên dưới --}}
+              <div style="background:var(--bg-gray);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div>
+                  <span style="color:var(--text-secondary)"><i class="fas fa-check-circle fa-fw" style="color:var(--primary)"></i> Đã nộp ngày {{ $existingApplication->applied_at->format('d/m/Y') }}</span>
+                  &nbsp;·&nbsp;
+                  <span style="color:{{ $scColor }};font-weight:600">{{ $sl }}</span>
+                </div>
+                <a href="{{ route('candidate.application.detail', $existingApplication->id) }}" class="btn btn-outline btn-sm">
+                  <i class="fas fa-file-alt fa-fw"></i> Xem đơn của tôi
+                </a>
+              </div>
+          @endif
+          @endauth
+
+          <div class="flex gap-10" style="align-items:center;flex-wrap:wrap">
             @auth
               @if(auth()->user()->user_type === 'employee')
-                @if($listing->users->contains(auth()->id()))
-                  <button class="btn btn-outline" disabled style="cursor:not-allowed;opacity:.6">
-                    <i class="fas fa-check-circle"></i> Đã ứng tuyển
-                  </button>
+                @if($applicantLimitReached && !$existingApplication)
+                  {{-- Job free đã đủ quota: ẩn nút ứng tuyển --}}
+                  <div style="background:#FFF7E6;border:1.5px solid #FAAD14;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+                    <i class="fas fa-pause-circle" style="color:#D48806;font-size:18px;flex-shrink:0"></i>
+                    <div>
+                      <div class="fw-600 fs-13" style="color:#7C4A00">Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm</div>
+                      <div class="fs-12" style="color:#A36000;margin-top:2px">Nhà tuyển dụng đang xem xét các đơn hiện có.</div>
+                    </div>
+                  </div>
+                @elseif($existingApplication)
+                  <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-outline btn-lg">
+                    <i class="fas fa-redo fa-fw"></i> Ứng tuyển lại
+                  </a>
                 @else
-                  <form action="{{ url('/application/'.$listing->id.'/submit') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-primary btn-lg">
-                      <i class="fas fa-paper-plane"></i> Ứng tuyển ngay
-                    </button>
-                  </form>
+                  <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-paper-plane fa-fw"></i> Ứng tuyển ngay
+                  </a>
                 @endif
               @endif
             @else
               <a href="{{ url('/login') }}" class="btn btn-primary btn-lg">
-                <i class="fas fa-paper-plane"></i> Đăng nhập để ứng tuyển
+                <i class="fas fa-paper-plane fa-fw"></i> Đăng nhập để ứng tuyển
               </a>
             @endauth
             <button class="btn btn-outline" onclick="shareJob()"><i class="fas fa-share-alt"></i> Chia sẻ</button>
