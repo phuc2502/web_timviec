@@ -17,7 +17,7 @@
       <div class="card-body" style="padding:24px;text-align:center">
         <div style="position:relative;display:inline-block;margin-bottom:16px">
           @if(auth()->user()->profile_pic)
-            <img src="{{ asset('storage/images/'.auth()->user()->profile_pic) }}" class="avatar avatar-xl" style="border:3px solid var(--primary-light)" alt="">
+            <img src="{{ auth()->user()->avatar_url }}" class="avatar avatar-xl" style="border:3px solid var(--primary-light)" alt="">
           @else
             <div class="avatar avatar-xl avatar-placeholder" style="font-size:36px;background:var(--primary-light);color:var(--primary);margin:0 auto">
               {{ strtoupper(substr(auth()->user()->name,0,1)) }}

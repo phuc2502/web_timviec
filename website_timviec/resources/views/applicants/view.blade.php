@@ -29,7 +29,7 @@
           <div class="flex gap-16" style="align-items:center">
             {{-- Avatar --}}
             @if($applicant->profile_pic)
-              <img src="{{ asset('storage/images/'.$applicant->profile_pic) }}" class="avatar avatar-md" alt="">
+              <img src="{{ $applicant->avatar_url }}" class="avatar avatar-md" alt="">
             @else
               <div class="avatar avatar-md avatar-placeholder" style="background:var(--primary-light);color:var(--primary);font-size:18px;font-weight:700">
                 {{ strtoupper(substr($applicant->name, 0, 1)) }}

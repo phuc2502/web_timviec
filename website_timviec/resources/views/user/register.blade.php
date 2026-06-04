@@ -13,7 +13,7 @@
 
     <div class="grid-2" style="gap:20px">
       {{-- EMPLOYEE --}}
-      <a href="{{ url('/register/employee') }}" class="card" style="padding:32px 24px;text-align:center;transition:var(--transition);display:block;text-decoration:none" onmouseover="this.style.borderColor='var(--primary)';this.style.transform='translateY(-4px)';this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='';this.style.boxShadow='var(--shadow-sm)'">
+      <a href="{{ url('/register/tim') }}" class="card" style="padding:32px 24px;text-align:center;transition:var(--transition);display:block;text-decoration:none" onmouseover="this.style.borderColor='var(--primary)';this.style.transform='translateY(-4px)';this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='';this.style.boxShadow='var(--shadow-sm)'">
         <div style="width:72px;height:72px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;color:var(--primary)">
           <i class="fas fa-user-tie"></i>
         </div>

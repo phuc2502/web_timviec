@@ -69,8 +69,8 @@
             </div>
             <div class="form-group">
               <label class="form-label">Hạn nộp hồ sơ</label>
-              <input type="date" name="application_close_date" class="form-control"
-                value="{{ old('application_close_date', optional($listing->application_close_date)->format('Y-m-d')) }}" min="{{ date('Y-m-d') }}">
+              <input type="date" name="date" class="form-control"
+                value="{{ old('date', \Carbon\Carbon::parse($listing->application_close_date)->format('Y-m-d')) }}">
             </div>
             <div class="form-group">
               <label class="form-label">Ảnh bìa hiện tại</label>
