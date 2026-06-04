@@ -19,31 +19,77 @@ class JobController extends Controller
             ->where(function ($q) {
                 $q->whereNull('application_close_date')
                   ->orWhere('application_close_date', '>=', now());
-            })
-            ->latest();
+            });
 
-        // Tìm kiếm
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', '%'.$request->search.'%')
-                  ->orWhere('description', 'like', '%'.$request->search.'%');
+        // ── 1. Keyword: tìm trên title, description, roles, predes ──────
+        $keyword = $request->filled('keyword') ? $request->keyword
+                 : ($request->filled('search')  ? $request->search : null);
+        if ($keyword) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title',       'like', '%' . $keyword . '%')
+                  ->orWhere('description','like', '%' . $keyword . '%')
+                  ->orWhere('roles',      'like', '%' . $keyword . '%')
+                  ->orWhere('predes',     'like', '%' . $keyword . '%');
             });
         }
 
-        // Lọc địa điểm
+        // ── 2. Địa điểm ─────────────────────────────────────────────────
         if ($request->filled('address')) {
-            $query->where('address', 'like', '%'.$request->address.'%');
+            $query->where('address', 'like', '%' . $request->address . '%');
         }
 
-        // Lọc loại hình
+        // ── 3. Loại hình công việc ───────────────────────────────────────
         if ($request->filled('job_type')) {
             $query->where('job_type', $request->job_type);
         }
 
-        $listings = $query->paginate(12)->withQueryString();
-        $total    = $listings->total();
+        // ── 4. Work mode (onsite / remote / hybrid) ──────────────────────
+        if ($request->filled('work_mode')) {
+            $query->where('work_mode', $request->work_mode);
+        }
 
-        return view('job.index', compact('listings', 'total'));
+        // ── 5. Khoảng lương ─────────────────────────────────────────────
+        if ($request->filled('salary_range')) {
+            match ($request->salary_range) {
+                'Thỏa Thuận'    => $query->where('salary', 0),
+                'Dưới 5 triệu'  => $query->where('salary', '>', 0)->where('salary', '<', 5000000),
+                '5 - 10 triệu'  => $query->whereBetween('salary', [5000000, 10000000]),
+                '10 - 15 triệu' => $query->whereBetween('salary', [10000000, 15000000]),
+                'Trên 15 triệu' => $query->where('salary', '>', 15000000),
+                default         => null,
+            };
+        }
+
+        // ── 6. Kinh nghiệm (năm) ────────────────────────────────────────
+        if ($request->filled('exp_range')) {
+            match ($request->exp_range) {
+                'Chưa có KN'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', 0)),
+                'Dưới 1 năm'   => $query->where('experience_years_min', '<=', 1),
+                '1 - 3 năm'    => $query->where('experience_years_min', '<=', 3)->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 1)),
+                '3 - 5 năm'    => $query->where('experience_years_min', '<=', 5)->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 3)),
+                'Trên 5 năm'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '>=', 5)),
+                default        => null,
+            };
+        }
+
+        // ── 7. Cấp độ công việc ─────────────────────────────────────────
+        if ($request->filled('job_level')) {
+            $query->where('job_level', $request->job_level);
+        }
+
+        // ── 8. Sắp xếp ──────────────────────────────────────────────────
+        $sort = $request->input('sort', 'newest');
+        match ($sort) {
+            'salary_desc'  => $query->orderByRaw('CASE WHEN salary = 0 THEN 1 ELSE 0 END ASC, salary DESC'),
+            'salary_asc'   => $query->orderByRaw('CASE WHEN salary = 0 THEN 1 ELSE 0 END ASC, salary ASC'),
+            'closing_soon' => $query->orderBy('application_close_date', 'asc'),
+            default        => $query->latest(),
+        };
+
+        $listings  = $query->paginate(12)->withQueryString();
+        $totalJobs = $listings->total();
+
+        return view('job.index', compact('listings', 'totalJobs'));
     }
 
     /**

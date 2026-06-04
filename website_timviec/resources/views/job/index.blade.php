@@ -39,7 +39,7 @@
 <div style="background:#fff;border-bottom:1px solid var(--border)">
   <div class="container" style="padding:14px 16px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
     @foreach(['Backend', 'Frontend', 'Mobile', 'DevOps', 'Data / AI', 'QA/Tester', 'UI/UX', 'Blockchain', 'Game'] as $cat)
-      <a href="{{ url('/job?keyword='.urlencode($cat)) }}" class="tag {{ request('keyword') == $cat ? 'tag-green' : 'tag-gray' }}" style="white-space:nowrap;font-size:13px;padding:6px 14px">
+      <a href="{{ request()->fullUrlWithQuery(['keyword' => $cat, 'page' => null]) }}" class="tag {{ request('keyword') == $cat ? 'tag-green' : 'tag-gray' }}" style="white-space:nowrap;font-size:13px;padding:6px 14px">
         {{ $cat }}
       </a>
     @endforeach
@@ -51,14 +51,29 @@
   <div class="flex gap-24" style="align-items:flex-start">
 
     {{-- SIDEBAR FILTER --}}
-    <aside class="sidebar" style="display:none" id="sidebar">
-      <form action="{{ url('/job') }}" method="GET">
+    <aside class="sidebar" id="sidebar">
+      <form action="{{ url('/job') }}" method="GET" id="filter-form">
+        {{-- Giữ lại keyword từ search bar --}}
         <input type="hidden" name="keyword" value="{{ request('keyword') }}">
+        {{-- Giữ lại sort hiện tại --}}
+        @if(request('sort'))
+          <input type="hidden" name="sort" value="{{ request('sort') }}">
+        @endif
 
         <div class="sidebar-card">
-          <div class="sidebar-card__title"><i class="fas fa-filter" style="color:var(--primary);margin-right:6px"></i>Lọc kết quả</div>
+          <div class="sidebar-card__title">
+            <i class="fas fa-filter" style="color:var(--primary);margin-right:6px"></i>Lọc kết quả
+            @php
+              $activeCount = collect(['job_type','work_mode','salary_range','exp_range','job_level','address'])
+                ->filter(fn($k) => request()->filled($k))->count();
+            @endphp
+            @if($activeCount > 0)
+              <span class="badge" style="background:var(--primary);color:#fff;border-radius:99px;padding:1px 8px;font-size:11px;margin-left:6px">{{ $activeCount }}</span>
+            @endif
+          </div>
           <div class="sidebar-card__body">
-            {{-- Job type --}}
+
+            {{-- Loại hình --}}
             <div class="filter-group">
               <div class="filter-group__label">Loại hình công việc</div>
               @foreach(['Full-time','Part-time','Remote','Freelance','Internship'] as $type)
@@ -69,7 +84,20 @@
               @endforeach
             </div>
             <div class="divider"></div>
-            {{-- Salary --}}
+
+            {{-- Work mode --}}
+            <div class="filter-group">
+              <div class="filter-group__label">Hình thức làm việc</div>
+              @foreach(['onsite' => 'Tại văn phòng', 'hybrid' => 'Hybrid', 'remote' => 'Remote 100%'] as $val => $label)
+                <label class="filter-option">
+                  <input type="radio" name="work_mode" value="{{ $val }}" {{ request('work_mode') == $val ? 'checked' : '' }}>
+                  {{ $label }}
+                </label>
+              @endforeach
+            </div>
+            <div class="divider"></div>
+
+            {{-- Mức lương --}}
             <div class="filter-group">
               <div class="filter-group__label">Mức lương</div>
               @foreach(['Thỏa Thuận','Dưới 5 triệu','5 - 10 triệu','10 - 15 triệu','Trên 15 triệu'] as $range)
@@ -80,7 +108,32 @@
               @endforeach
             </div>
             <div class="divider"></div>
-            {{-- Location --}}
+
+            {{-- Kinh nghiệm --}}
+            <div class="filter-group">
+              <div class="filter-group__label">Kinh nghiệm</div>
+              @foreach(['Chưa có KN','Dưới 1 năm','1 - 3 năm','3 - 5 năm','Trên 5 năm'] as $exp)
+                <label class="filter-option">
+                  <input type="radio" name="exp_range" value="{{ $exp }}" {{ request('exp_range') == $exp ? 'checked' : '' }}>
+                  {{ $exp }}
+                </label>
+              @endforeach
+            </div>
+            <div class="divider"></div>
+
+            {{-- Cấp độ --}}
+            <div class="filter-group">
+              <div class="filter-group__label">Cấp độ</div>
+              @foreach(['intern' => 'Intern', 'fresher' => 'Fresher', 'junior' => 'Junior', 'middle' => 'Middle', 'senior' => 'Senior', 'lead' => 'Lead / Manager'] as $val => $label)
+                <label class="filter-option">
+                  <input type="radio" name="job_level" value="{{ $val }}" {{ request('job_level') == $val ? 'checked' : '' }}>
+                  {{ $label }}
+                </label>
+              @endforeach
+            </div>
+            <div class="divider"></div>
+
+            {{-- Địa điểm --}}
             <div class="filter-group">
               <div class="filter-group__label">Địa điểm</div>
               @foreach(['Hà Nội','Hồ Chí Minh','Đà Nẵng','Remote'] as $loc)
@@ -90,8 +143,9 @@
                 </label>
               @endforeach
             </div>
+
             <button type="submit" class="btn btn-primary btn-block mt-12">Áp dụng</button>
-            <a href="{{ url('/job') }}" class="btn btn-outline btn-block mt-8" style="font-size:13px">Xoá tất cả bộ lọc</a>
+            <a href="{{ url('/job') . (request('keyword') ? '?keyword='.urlencode(request('keyword')) : '') }}" class="btn btn-outline btn-block mt-8" style="font-size:13px">Xoá tất cả bộ lọc</a>
           </div>
         </div>
       </form>
@@ -101,23 +155,41 @@
     <div style="flex:1;min-width:0">
       <div class="flex-between mb-16">
         <div>
-          <span class="fw-700 fs-16" style="color:var(--secondary)">Việc làm mới nhất</span>
+          <span class="fw-700 fs-16" style="color:var(--secondary)">
+            @php
+              $sortLabels = [
+                'newest'       => 'Việc làm mới nhất',
+                'salary_desc'  => 'Lương cao nhất',
+                'salary_asc'   => 'Lương thấp nhất',
+                'closing_soon' => 'Hạn nộp gần nhất',
+              ];
+              $currentSort = request('sort');
+              if (request('keyword')) {
+                $sortLabel = 'Kết quả cho: "' . request('keyword') . '"';
+              } elseif ($currentSort && isset($sortLabels[$currentSort])) {
+                $sortLabel = $sortLabels[$currentSort];
+              } else {
+                $sortLabel = 'Tất cả việc làm';
+              }
+            @endphp
+            {{ $sortLabel }}
+          </span>
           <span class="text-muted fs-13 ml-8">({{ method_exists($listings, 'total') ? $listings->total() : $listings->count() }} kết quả)</span>
         </div>
         <div class="flex gap-8">
           <select class="form-control" style="width:auto;padding:6px 12px;font-size:13px" onchange="location=this.value">
-            <option value="{{ url('/job') . (request('keyword') ? '?keyword='.urlencode(request('keyword')) : '') }}" {{ !request('sort') ? 'selected' : '' }}>Mặc định (mới nhất)</option>
+            <option value="{{ url('/job') . (request('keyword') ? '?keyword='.urlencode(request('keyword')) : '') }}" {{ !request('sort') ? 'selected' : '' }}>Mặc định</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'newest']) }}" {{ request('sort') == 'newest' ? 'selected' : '' }}>Mới nhất</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'salary_desc']) }}" {{ request('sort') == 'salary_desc' ? 'selected' : '' }}>Lương cao nhất</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'salary_asc']) }}" {{ request('sort') == 'salary_asc' ? 'selected' : '' }}>Lương thấp nhất</option>
             <option value="{{ request()->fullUrlWithQuery(['sort' => 'closing_soon']) }}" {{ request('sort') == 'closing_soon' ? 'selected' : '' }}>Hạn nộp gần nhất</option>
           </select>
-          @if(request()->hasAny(['keyword','job_type','salary_range','address','sort']))
+          @if(request()->hasAny(['keyword','job_type','work_mode','salary_range','exp_range','job_level','address','sort']))
             <a href="{{ url('/job') }}" class="btn btn-outline btn-sm" title="Xóa tất cả bộ lọc" style="white-space:nowrap">
               <i class="fas fa-times"></i> Xóa lọc
             </a>
           @endif
-          <button onclick="document.getElementById('sidebar').style.display=document.getElementById('sidebar').style.display==='none'?'block':'none'" class="btn btn-outline btn-sm"><i class="fas fa-filter"></i> Lọc</button>
+          <button onclick="var s=document.getElementById('sidebar');s.style.display=s.style.display==='none'?'block':'none'" class="btn btn-outline btn-sm d-lg-none"><i class="fas fa-filter"></i> Lọc</button>
         </div>
       </div>
 

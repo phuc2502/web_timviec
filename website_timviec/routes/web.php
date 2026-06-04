@@ -54,126 +54,173 @@ function mockListing($id = 1) {
 }
 
 // ─── Mock Job List ─────────────────────────────────────────────────────────
-function mockListings($n = 10) {
-    $titles = [
-        'Senior PHP / Laravel Developer',
-        'Frontend Developer (ReactJS)',
-        'DevOps Engineer',
-        'Mobile Developer (Flutter)',
-        'Data Engineer (Python)',
-        'Backend NodeJS Developer',
-        'Senior QA / Automation Tester',
-        'UI/UX Product Designer',
-        'Blockchain Smart Contract Dev',
-        'Unity Game Developer',
+function mockListings($n = 30) {
+    $jobPool = [
+        // --- Hà Nội ---
+        ['title'=>'Senior PHP / Laravel Developer',    'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>35000000, 'exp_min'=>3, 'exp_max'=>7,  'job_level'=>'senior',  'roles'=>'Tối thiểu 3 năm kinh nghiệm PHP/Laravel, thành thạo MySQL, Redis, Docker, Git, CI/CD'],
+        ['title'=>'Technical Lead - Java Spring Boot', 'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>50000000, 'exp_min'=>5, 'exp_max'=>10, 'job_level'=>'lead',    'roles'=>'Tối thiểu 5 năm kinh nghiệm Java Spring Boot, kinh nghiệm kiến trúc hệ thống lớn'],
+        ['title'=>'DevOps Engineer',                   'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>40000000, 'exp_min'=>3, 'exp_max'=>6,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm DevOps, thành thạo Docker Kubernetes AWS Linux'],
+        ['title'=>'Junior ReactJS Developer',          'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>10000000, 'exp_min'=>0, 'exp_max'=>1,  'job_level'=>'junior',  'roles'=>'0-1 năm kinh nghiệm ReactJS, biết HTML CSS JavaScript TypeScript'],
+        ['title'=>'QA Automation Engineer',            'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>18000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm QA automation, thành thạo Selenium hoặc Playwright'],
+        ['title'=>'Product Manager - Fintech',         'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>45000000, 'exp_min'=>3, 'exp_max'=>7,  'job_level'=>'senior',  'roles'=>'3+ năm kinh nghiệm Product Manager trong lĩnh vực fintech hoặc banking'],
+        ['title'=>'Golang Backend Developer',          'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>30000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm Golang, kinh nghiệm xây dựng microservices, gRPC'],
+        ['title'=>'Intern Frontend (React/Vue)',       'address'=>'Hà Nội',      'job_type'=>'Internship', 'work_mode'=>'onsite',  'salary'=>3000000,  'exp_min'=>0, 'exp_max'=>0,  'job_level'=>'intern',  'roles'=>'Sinh viên năm 3-4 ngành CNTT, biết cơ bản HTML CSS JavaScript ReactJS hoặc VueJS'],
+        ['title'=>'Data Analyst (SQL + Python)',       'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>22000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm phân tích dữ liệu, thành thạo SQL Python Pandas Tableau'],
+        ['title'=>'Network Security Engineer',         'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>28000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm bảo mật mạng, kinh nghiệm với firewall IDS/IPS penetration testing'],
+        // --- Hồ Chí Minh ---
+        ['title'=>'Frontend Developer (ReactJS)',      'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>28000000, 'exp_min'=>2, 'exp_max'=>4,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm ReactJS, thành thạo Redux TypeScript REST API'],
+        ['title'=>'Backend Developer Python/Django',   'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'remote',  'salary'=>20000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm Python Django, biết PostgreSQL Redis Docker'],
+        ['title'=>'iOS Developer (Swift)',             'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>32000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm iOS Swift, kinh nghiệm publish App Store, biết SwiftUI'],
+        ['title'=>'AI/ML Engineer',                   'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>42000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'senior',  'roles'=>'2+ năm kinh nghiệm Machine Learning, thành thạo Python TensorFlow PyTorch scikit-learn'],
+        ['title'=>'UI/UX Product Designer',           'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>20000000, 'exp_min'=>1, 'exp_max'=>4,  'job_level'=>'middle',  'roles'=>'1+ năm kinh nghiệm thiết kế UI/UX, thành thạo Figma Adobe XD, có portfolio'],
+        ['title'=>'Blockchain Smart Contract Dev',     'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'remote',  'salary'=>0,        'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'senior',  'roles'=>'2+ năm kinh nghiệm Solidity Ethereum Web3.js, kinh nghiệm audit smart contract'],
+        ['title'=>'Part-time NodeJS Developer',       'address'=>'Hồ Chí Minh', 'job_type'=>'Part-time',  'work_mode'=>'remote',  'salary'=>12000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm NodeJS Express, biết MongoDB PostgreSQL REST API'],
+        ['title'=>'Database Administrator (MySQL)',    'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>25000000, 'exp_min'=>3, 'exp_max'=>6,  'job_level'=>'senior',  'roles'=>'3+ năm kinh nghiệm MySQL DBA, thành thạo query optimization replication backup'],
+        ['title'=>'Scrum Master / Agile Coach',       'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>38000000, 'exp_min'=>3, 'exp_max'=>7,  'job_level'=>'senior',  'roles'=>'3+ năm kinh nghiệm Scrum Master, chứng chỉ CSM hoặc PSM, kinh nghiệm coaching team Agile'],
+        ['title'=>'Intern Data Science',              'address'=>'Hồ Chí Minh', 'job_type'=>'Internship', 'work_mode'=>'onsite',  'salary'=>4000000,  'exp_min'=>0, 'exp_max'=>0,  'job_level'=>'intern',  'roles'=>'Sinh viên năm 3-4 ngành Toán Tin hoặc CNTT, biết Python cơ bản và thống kê'],
+        // --- Đà Nẵng ---
+        ['title'=>'Mobile Developer (Flutter)',        'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>25000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm Flutter Dart, biết tích hợp REST API Firebase'],
+        ['title'=>'Unity Game Developer',             'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>20000000, 'exp_min'=>1, 'exp_max'=>4,  'job_level'=>'middle',  'roles'=>'1+ năm kinh nghiệm Unity C#, có game đã publish là lợi thế'],
+        ['title'=>'Full-stack PHP Developer',         'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>18000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm PHP Laravel, biết HTML CSS JavaScript MySQL'],
+        ['title'=>'Embedded Systems Engineer',        'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>22000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm lập trình nhúng C/C++, kinh nghiệm với STM32 Arduino Linux Embedded'],
+        ['title'=>'Fresher Backend Laravel',          'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>8000000,  'exp_min'=>0, 'exp_max'=>1,  'job_level'=>'fresher', 'roles'=>'Fresher hoặc dưới 1 năm kinh nghiệm PHP Laravel, tốt nghiệp đại học CNTT'],
+        // --- Remote ---
+        ['title'=>'Remote Senior NodeJS Developer',   'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>0,        'exp_min'=>4, 'exp_max'=>8,  'job_level'=>'senior',  'roles'=>'4+ năm kinh nghiệm NodeJS, thành thạo microservices Docker AWS, lương thỏa thuận hấp dẫn'],
+        ['title'=>'Remote TypeScript Developer',      'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>30000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm TypeScript ReactJS hoặc NodeJS, có thể làm việc độc lập'],
+        ['title'=>'Remote Cloud Architect (AWS)',     'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>60000000, 'exp_min'=>5, 'exp_max'=>10, 'job_level'=>'lead',    'roles'=>'5+ năm kinh nghiệm AWS cloud architecture, chứng chỉ AWS Solutions Architect'],
+        ['title'=>'Remote Kotlin Android Developer',  'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>28000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm Android Kotlin, kinh nghiệm publish Google Play Store'],
+        ['title'=>'Remote Rust Systems Developer',    'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>0,        'exp_min'=>3, 'exp_max'=>7,  'job_level'=>'senior',  'roles'=>'3+ năm kinh nghiệm Rust, kinh nghiệm hệ thống low-level hoặc WebAssembly, lương thỏa thuận'],
     ];
-    $cities = ['Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Remote'];
-    $types  = ['Full-time', 'Part-time', 'Remote', 'Internship'];
-    $list   = [];
-    for ($i = 1; $i <= $n; $i++) {
+
+    $companies = [
+        'FPT Software', 'VNG Corporation', 'TopDev Vietnam', 'NashTech Global',
+        'TechStartup JSC', 'Viettel Cyber Security', 'Got It Inc.', 'CodeLab Studio',
+    ];
+
+    $list  = [];
+    $total = min($n, count($jobPool));
+    for ($i = 0; $i < $total; $i++) {
+        $job  = $jobPool[$i];
         $user = mockUser('employer');
+        $user->company_name = $companies[$i % count($companies)];
         $list[] = (object)[
-            'id' => $i,
-            'user_id' => $user->id,
-            'title' => $titles[$i - 1] ?? "Vị trí số $i",
-            'slug' => 'job-' . $i,
-            'address' => $cities[array_rand($cities)],
-            'job_type' => $types[array_rand($types)],
-            'salary' => rand(0, 5) === 0 ? 0 : rand(8, 45) * 1000000, // Include some 0 (Thỏa thuận) salaries
-            'feature_image' => null,
-            'application_close_date' => now()->addDays(rand(5, 30)),
-            'created_at' => now()->subDays(rand(1, 10)),
-            'user' => $user,
-            'users' => collect(array_fill(0, rand(1, 15), null)),
+            'id'                     => $i + 1,
+            'user_id'                => $user->id,
+            'title'                  => $job['title'],
+            'slug'                   => 'job-' . ($i + 1),
+            'description'            => 'Mô tả chi tiết về vị trí ' . $job['title'],
+            'roles'                  => $job['roles'],
+            'predes'                 => 'Lương cạnh tranh, bảo hiểm đầy đủ, môi trường làm việc chuyên nghiệp',
+            'address'                => $job['address'],
+            'job_type'               => $job['job_type'],
+            'work_mode'              => $job['work_mode'],
+            'salary'                 => $job['salary'],
+            'experience_years_min'   => $job['exp_min'],
+            'experience_years_max'   => $job['exp_max'],
+            'job_level'              => $job['job_level'],
+            'feature_image'          => null,
+            'application_close_date' => now()->addDays(rand(5, 45)),
+            'created_at'             => now()->subDays(rand(0, 14)),
+            'user'                   => $user,
+            'users'                  => collect(array_fill(0, rand(1, 20), null)),
         ];
     }
     return collect($list);
 }
 
 function getSortedMockListings() {
-    $sort = request('sort', 'newest');
-    $keyword = trim(request('keyword', ''));
-    $address = request('address');
-    $jobType = request('job_type');
+    $sort        = request('sort', 'newest');
+    $keyword     = trim(request('keyword', ''));
+    $address     = request('address');
+    $jobType     = request('job_type');
+    $workMode    = request('work_mode');
     $salaryRange = request('salary_range');
-    
-    // Generate 10 listings so we have a good variety of mock data
-    $listings = mockListings(10);
-    
-    // 1. Keyword search (case-insensitive) on title/description
+    $expRange    = request('exp_range');
+    $jobLevel    = request('job_level');
+
+    $listings = mockListings(30);
+
+    // 1. Keyword — tìm trên title, roles, predes, description
     if ($keyword !== '') {
         $listings = $listings->filter(function ($listing) use ($keyword) {
-            $title = strtolower($listing->title);
-            $kw = strtolower($keyword);
-            
-            // Map common tags to mock title matches
-            if ($kw === 'data / ai') {
-                return str_contains($title, 'data') || str_contains($title, 'python');
-            }
-            if ($kw === 'qa/tester') {
-                return str_contains($title, 'qa') || str_contains($title, 'tester');
-            }
-            if ($kw === 'mobile') {
-                return str_contains($title, 'mobile') || str_contains($title, 'flutter');
-            }
-            if ($kw === 'game') {
-                return str_contains($title, 'game') || str_contains($title, 'unity');
-            }
-            
-            return str_contains($title, $kw) || str_contains(strtolower($listing->description ?? ''), $kw);
+            $kw = mb_strtolower($keyword);
+            return str_contains(mb_strtolower($listing->title),       $kw)
+                || str_contains(mb_strtolower($listing->roles       ?? ''), $kw)
+                || str_contains(mb_strtolower($listing->predes      ?? ''), $kw)
+                || str_contains(mb_strtolower($listing->description ?? ''), $kw);
         })->values();
     }
-    
-    // 2. Address/location filter (e.g. Hà Nội, Hồ Chí Minh, Đà Nẵng, Remote)
+
+    // 2. Địa điểm
     if ($address) {
         $listings = $listings->filter(function ($listing) use ($address) {
-            if (strtolower($address) === 'remote') {
-                return strtolower($listing->address) === 'remote' || strtolower($listing->job_type) === 'remote' || strtolower($listing->job_type) === 'freelance';
-            }
             return mb_stripos($listing->address, $address) !== false;
         })->values();
     }
-    
-    // 3. Job type filter (e.g. Full-time, Part-time, Freelance, Internship)
+
+    // 3. Loại hình
     if ($jobType) {
         $listings = $listings->filter(function ($listing) use ($jobType) {
-            return strtolower($listing->job_type) === strtolower($jobType);
+            return mb_strtolower($listing->job_type) === mb_strtolower($jobType);
         })->values();
     }
-    
-    // 4. Salary range filter
+
+    // 4. Work mode
+    if ($workMode) {
+        $listings = $listings->filter(function ($listing) use ($workMode) {
+            return mb_strtolower($listing->work_mode ?? '') === mb_strtolower($workMode);
+        })->values();
+    }
+
+    // 5. Khoảng lương
     if ($salaryRange) {
         $listings = $listings->filter(function ($listing) use ($salaryRange) {
-            $salary = $listing->salary;
-            if ($salaryRange === 'Thỏa Thuận') {
-                return $salary == 0;
-            } elseif ($salaryRange === 'Dưới 5 triệu') {
-                return $salary > 0 && $salary < 5000000;
-            } elseif ($salaryRange === '5 - 10 triệu') {
-                return $salary >= 5000000 && $salary <= 10000000;
-            } elseif ($salaryRange === '10 - 15 triệu') {
-                return $salary >= 10000000 && $salary <= 15000000;
-            } elseif ($salaryRange === 'Trên 15 triệu') {
-                return $salary > 15000000;
-            }
-            return true;
+            $s = $listing->salary;
+            return match ($salaryRange) {
+                'Thỏa Thuận'    => $s == 0,
+                'Dưới 5 triệu'  => $s > 0 && $s < 5000000,
+                '5 - 10 triệu'  => $s >= 5000000  && $s <= 10000000,
+                '10 - 15 triệu' => $s >= 10000000 && $s <= 15000000,
+                'Trên 15 triệu' => $s > 15000000,
+                default         => true,
+            };
         })->values();
     }
-    
-    // 5. Sorting
-    if ($sort === 'salary_desc') {
-        return $listings->sortByDesc('salary')->values();
-    } elseif ($sort === 'salary_asc') {
-        return $listings->sort(function ($a, $b) {
+
+    // 6. Kinh nghiệm
+    if ($expRange) {
+        $listings = $listings->filter(function ($listing) use ($expRange) {
+            $min = $listing->experience_years_min ?? 0;
+            $max = $listing->experience_years_max ?? 99;
+            return match ($expRange) {
+                'Chưa có KN'  => $min == 0,
+                'Dưới 1 năm'  => $min <= 1,
+                '1 - 3 năm'   => $min <= 3 && $max >= 1,
+                '3 - 5 năm'   => $min <= 5 && $max >= 3,
+                'Trên 5 năm'  => $min >= 5,
+                default       => true,
+            };
+        })->values();
+    }
+
+    // 7. Cấp độ
+    if ($jobLevel) {
+        $listings = $listings->filter(function ($listing) use ($jobLevel) {
+            return mb_strtolower($listing->job_level ?? '') === mb_strtolower($jobLevel);
+        })->values();
+    }
+
+    // 8. Sắp xếp
+    return match ($sort) {
+        'salary_desc'  => $listings->sortByDesc('salary')->values(),
+        'salary_asc'   => $listings->sort(function ($a, $b) {
             if ($a->salary == 0 && $b->salary != 0) return 1;
             if ($a->salary != 0 && $b->salary == 0) return -1;
             return $a->salary <=> $b->salary;
-        })->values();
-    } elseif ($sort === 'closing_soon') {
-        return $listings->sortBy('application_close_date')->values();
-    } else {
-        return $listings->sortByDesc('created_at')->values();
-    }
+        })->values(),
+        'closing_soon' => $listings->sortBy('application_close_date')->values(),
+        default        => $listings->sortByDesc('created_at')->values(),
+    };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -181,9 +228,10 @@ function getSortedMockListings() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::get('/', function () {
+    $listings = getSortedMockListings();
     return view('job.index', [
-        'listings' => getSortedMockListings(),
-        'total' => 6,
+        'listings'  => $listings,
+        'totalJobs' => 30,
     ]);
 });
 
@@ -218,7 +266,13 @@ Route::middleware(['auth'])->group(function () {
 // ═══════════════════════════════════════════════════════════════════════════
 
     // Jobs
-    Route::get('/job',         fn() => view('job.index', ['listings' => getSortedMockListings(), 'total' => 6]));
+    Route::get('/job', function () {
+        $listings = getSortedMockListings();
+        return view('job.index', [
+            'listings'  => $listings,
+            'totalJobs' => 30,
+        ]);
+    });
     Route::get('/job/create',  fn() => view('job.create'));
     Route::get('/job/manage',  fn() => view('job.manage', ['listings' => mockListings(4)]));
     Route::get('/job/{id}/edit', fn($id) => view('job.edit', ['listing' => mockListing($id)]));
