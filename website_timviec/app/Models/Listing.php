@@ -19,11 +19,6 @@ class Listing extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function applications()
-    {
-        return $this->hasMany(\App\Models\Application::class);
-    }
-
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'listing_user')

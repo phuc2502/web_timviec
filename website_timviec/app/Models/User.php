@@ -2,26 +2,29 @@
 
 namespace App\Models;
 
+use App\Notifications\VerifyEmailNotification;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     protected $fillable = [
         'name', 'email', 'password',
+        'google_id', 'github_id',
         'user_type', 'profile_pic', 'resume', 'about',
-        'company_name', 'company_logo', 'plan',
-        'billing_ends', 'user_trial', 'is_banned',
+        'experience_years', 'desired_salary', 'location',
+        'company_name', 'company_logo', 'company_website', 'company_size',
+        'plan', 'billing_ends', 'user_trial',
+        'is_admin', 'is_banned', 'banned_at',
+        'email_verified_at',
     ];
-
-    protected $guarded = [];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -31,12 +34,56 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'billing_ends'      => 'datetime',
             'user_trial'        => 'datetime',
+            'banned_at'         => 'datetime',
             'password'          => 'hashed',
+            'is_admin'          => 'boolean',
             'is_banned'         => 'boolean',
         ];
     }
 
-    // ─── Relationships (trả về collection rỗng khi preview) ────────────────
+    // ─── Accessors ─────────────────────────────────────────────────────────
+
+    public function isEmployee(): bool
+    {
+        return $this->user_type === 'employee';
+    }
+
+    public function isEmployer(): bool
+    {
+        return $this->user_type === 'employer';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->user_type === 'admin' || $this->is_admin;
+    }
+
+    public function onTrial(): bool
+    {
+        return $this->user_trial && now()->lessThan($this->user_trial);
+    }
+
+    public function hasActivePlan(): bool
+    {
+        return ($this->billing_ends && now()->lessThanOrEqualTo($this->billing_ends))
+            || $this->onTrial();
+    }
+
+    public function getAvatarUrlAttribute(): string
+    {
+        if ($this->profile_pic) {
+            if (str_starts_with($this->profile_pic, 'http')) {
+                return $this->profile_pic;
+            }
+            return asset('storage/images/' . $this->profile_pic);
+        }
+
+        $name = urlencode($this->name);
+        return "https://ui-avatars.com/api/?name={$name}&background=10b981&color=fff&size=128&bold=true";
+    }
+
+    // ─── Relationships ──────────────────────────────────────────────────────
+
     public function listings()
     {
         return $this->hasMany(\App\Models\Listing::class);
@@ -49,88 +96,13 @@ class User extends Authenticatable
                     ->withTimestamps();
     }
 
-    /**
-     * CV online của ứng viên (1-1).
-     */
     public function cvData()
     {
         return $this->hasOne(\App\Models\CvData::class);
     }
 
-    /**
-     * Lượt ứng tuyển của ứng viên (1-1).
-     */
-    public function userToken()
+    public function sendEmailVerificationNotification(): void
     {
-        return $this->hasOne(\App\Models\UserToken::class);
-    }
-
-    /**
-     * CVs đã upload của ứng viên (1-n).
-     */
-    public function cvs()
-    {
-        return $this->hasMany(\App\Models\Cv::class);
-    }
-
-    /**
-     * Đơn ứng tuyển của ứng viên (1-n).
-     */
-    public function applications()
-    {
-        return $this->hasMany(\App\Models\Application::class);
-    }
-
-    /**
-     * Gói subscription của nhà tuyển dụng (1-n).
-     */
-    public function subscriptions()
-    {
-        return $this->hasMany(\App\Models\Subscription::class);
-    }
-
-    /**
-     * Lịch sử thanh toán (1-n).
-     */
-    public function payments()
-    {
-        return $this->hasMany(\App\Models\Payment::class);
-    }
-
-    /**
-     * Kiểm tra có phải ứng viên không.
-     */
-    public function isCandidate(): bool
-    {
-        return $this->user_type === 'employee';
-    }
-
-    /**
-     * Kiểm tra có phải nhà tuyển dụng không.
-     */
-    public function isEmployer(): bool
-    {
-        return $this->user_type === 'employer';
-    }
-
-    // ─── Premium Helpers ───────────────────────────────────────────────────
-
-    /**
-     * Kiểm tra employer có đang trong gói Premium không.
-     */
-    public function isPremium(): bool
-    {
-        return !empty($this->billing_ends) && $this->billing_ends->isFuture();
-    }
-
-    /**
-     * Đếm số bài đã đăng trong tháng hiện tại.
-     */
-    public function monthlyPostCount(): int
-    {
-        return $this->listings()
-            ->whereYear('created_at', now()->year)
-            ->whereMonth('created_at', now()->month)
-            ->count();
+        $this->notify(new VerifyEmailNotification());
     }
 }
