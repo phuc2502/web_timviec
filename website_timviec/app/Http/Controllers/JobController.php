@@ -20,6 +20,28 @@ class JobController extends Controller
                 $q->whereNull('application_close_date')
                   ->orWhere('application_close_date', '>=', now());
             })
+            // Ẩn bài đăng của Free account đã nhận đủ 3 ứng viên:
+            // Điều kiện: employer là Premium  →  hiển thị luôn
+            //            employer là Free     →  chỉ hiển thị khi số đơn < 3
+            ->where(function ($q) {
+                $q->whereHas('user', function ($u) {
+                      // Premium: billing_ends > now() AND status = active
+                      $u->whereHas('subscriptions', function ($s) {
+                          $s->where('status', 'active')
+                            ->where('billing_ends', '>', now());
+                      });
+                  })
+                  ->orWhere(function ($q2) {
+                      // Free: chưa đủ 3 ứng viên
+                      $q2->whereDoesntHave('user', function ($u) {
+                              $u->whereHas('subscriptions', function ($s) {
+                                  $s->where('status', 'active')
+                                    ->where('billing_ends', '>', now());
+                              });
+                          })
+                          ->whereHas('applications', function ($a) {}, '<', 3);
+                  });
+            })
             ->latest();
 
         // Tìm kiếm
@@ -61,7 +83,10 @@ class JobController extends Controller
                 ->first();
         }
 
-        return view('job.show', compact('listing', 'existingApplication'));
+        // Kiểm tra job của Free account đã nhận đủ 3 ứng viên chưa
+        $applicantLimitReached = $listing->applicantLimitReached();
+
+        return view('job.show', compact('listing', 'existingApplication', 'applicantLimitReached'));
     }
 
     /**

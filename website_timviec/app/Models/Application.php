@@ -10,6 +10,8 @@ class Application extends Model
     protected $fillable = [
         'user_id', 'listing_id', 'cv_id', 'cover_letter',
         'status', 'applied_at', 'status_updated_at', 'interview_scheduled_at',
+        // Contact snapshot (SSOT — cả 2 phía đọc từ đây)
+        'applicant_name', 'applicant_phone', 'applicant_email',
     ];
 
     protected $casts = [

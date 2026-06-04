@@ -23,14 +23,41 @@ class ApplicationController extends Controller
      */
     public function showForm(int $listingId)
     {
-        $listing    = Listing::findOrFail($listingId);
-        $candidate  = auth()->user();
-        $suggestedCv = $this->service->suggestLatestCv($candidate);
+        $listing   = Listing::findOrFail($listingId);
+        $candidate = auth()->user();
+
+        // Đơn ứng tuyển hiện tại của job này (nếu re-apply)
+        $existingApp = \App\Models\Application::with('cv')
+            ->where('user_id', $candidate->id)
+            ->where('listing_id', $listingId)
+            ->first();
+
+        // suggestedCv: ưu tiên CV của đơn job này (re-apply), sau đó CV gần nhất toàn hệ thống
+        if ($existingApp && $existingApp->cv) {
+            $suggestedCv = $existingApp->cv;
+        } else {
+            $suggestedCv = $this->service->suggestLatestCv($candidate);
+        }
+
+        // Autofill: ưu tiên thông tin đã lưu trong đơn job này,
+        // sau đó đơn gần nhất bất kỳ, cuối cùng mới lấy từ user profile
+        $sourceApp = $existingApp ?? \App\Models\Application::where('user_id', $candidate->id)
+            ->orderByDesc('applied_at')
+            ->first();
+
+        $autofill = [
+            'name'         => $sourceApp?->applicant_name  ?? $candidate->name,
+            'email'        => $sourceApp?->applicant_email ?? $candidate->email,
+            'phone'        => $sourceApp?->applicant_phone ?? $candidate->phone ?? '',
+            'cover_letter' => $existingApp?->cover_letter  ?? '',
+        ];
 
         return view('application.form', [
             'listing'     => $listing,
             'listingId'   => $listingId,
             'suggestedCv' => $suggestedCv,
+            'autofill'    => $autofill,
+            'existingApp' => $existingApp,
         ]);
     }
 
@@ -49,6 +76,10 @@ class ApplicationController extends Controller
                 ->with('success', 'Ứng tuyển thành công!');
 
         } catch (\RuntimeException $e) {
+            // Giới hạn free account: hiển thị thông báo riêng
+            if (str_starts_with($e->getMessage(), '__FREE_LIMIT__:')) {
+                return back()->with('error', 'Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm. Vui lòng tìm việc khác.');
+            }
             return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             Log::error("Apply job failed: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
@@ -91,8 +122,9 @@ class ApplicationController extends Controller
     {
         $employer     = auth()->user();
         $applications = $this->service->listByJob($employer, $listingId);
+        $listing      = \App\Models\Listing::with('user')->findOrFail($listingId);
 
-        return view('application.applicant-list', compact('applications', 'listingId'));
+        return view('application.applicant-list', compact('applications', 'listingId', 'listing'));
     }
 
     /**

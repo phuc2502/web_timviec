@@ -19,10 +19,31 @@ class Listing extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function applications()
+    {
+        return $this->hasMany(\App\Models\Application::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'listing_user')
                     ->withPivot(['shortlisted'])
                     ->withTimestamps();
+    }
+
+    // ─── Free-tier Helpers ────────────────────────────────────────────────
+
+    /**
+     * Job của tài khoản Free đã nhận đủ 3 ứng viên chưa?
+     */
+    public function applicantLimitReached(): bool
+    {
+        if (!$this->relationLoaded('user')) {
+            $this->load('user');
+        }
+        if ($this->user->isPremium()) {
+            return false;
+        }
+        return $this->applications()->count() >= 3;
     }
 }
