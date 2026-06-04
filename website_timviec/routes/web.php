@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\JobController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Helper: Mock User ─────────────────────────────────────────────────────
@@ -50,7 +54,7 @@ function mockListing($id = 1) {
 }
 
 // ─── Mock Job List ─────────────────────────────────────────────────────────
-function mockListings($n = 6) {
+function mockListings($n = 10) {
     $titles = [
         'Senior PHP / Laravel Developer',
         'Frontend Developer (ReactJS)',
@@ -58,6 +62,10 @@ function mockListings($n = 6) {
         'Mobile Developer (Flutter)',
         'Data Engineer (Python)',
         'Backend NodeJS Developer',
+        'Senior QA / Automation Tester',
+        'UI/UX Product Designer',
+        'Blockchain Smart Contract Dev',
+        'Unity Game Developer',
     ];
     $cities = ['Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Remote'];
     $types  = ['Full-time', 'Part-time', 'Remote', 'Internship'];
@@ -71,7 +79,7 @@ function mockListings($n = 6) {
             'slug' => 'job-' . $i,
             'address' => $cities[array_rand($cities)],
             'job_type' => $types[array_rand($types)],
-            'salary' => rand(10, 50) * 1000000,
+            'salary' => rand(0, 5) === 0 ? 0 : rand(8, 45) * 1000000, // Include some 0 (Thỏa thuận) salaries
             'feature_image' => null,
             'application_close_date' => now()->addDays(rand(5, 30)),
             'created_at' => now()->subDays(rand(1, 10)),
@@ -84,8 +92,75 @@ function mockListings($n = 6) {
 
 function getSortedMockListings() {
     $sort = request('sort', 'newest');
-    $listings = mockListings(6);
+    $keyword = trim(request('keyword', ''));
+    $address = request('address');
+    $jobType = request('job_type');
+    $salaryRange = request('salary_range');
     
+    // Generate 10 listings so we have a good variety of mock data
+    $listings = mockListings(10);
+    
+    // 1. Keyword search (case-insensitive) on title/description
+    if ($keyword !== '') {
+        $listings = $listings->filter(function ($listing) use ($keyword) {
+            $title = strtolower($listing->title);
+            $kw = strtolower($keyword);
+            
+            // Map common tags to mock title matches
+            if ($kw === 'data / ai') {
+                return str_contains($title, 'data') || str_contains($title, 'python');
+            }
+            if ($kw === 'qa/tester') {
+                return str_contains($title, 'qa') || str_contains($title, 'tester');
+            }
+            if ($kw === 'mobile') {
+                return str_contains($title, 'mobile') || str_contains($title, 'flutter');
+            }
+            if ($kw === 'game') {
+                return str_contains($title, 'game') || str_contains($title, 'unity');
+            }
+            
+            return str_contains($title, $kw) || str_contains(strtolower($listing->description ?? ''), $kw);
+        })->values();
+    }
+    
+    // 2. Address/location filter (e.g. Hà Nội, Hồ Chí Minh, Đà Nẵng, Remote)
+    if ($address) {
+        $listings = $listings->filter(function ($listing) use ($address) {
+            if (strtolower($address) === 'remote') {
+                return strtolower($listing->address) === 'remote' || strtolower($listing->job_type) === 'remote' || strtolower($listing->job_type) === 'freelance';
+            }
+            return mb_stripos($listing->address, $address) !== false;
+        })->values();
+    }
+    
+    // 3. Job type filter (e.g. Full-time, Part-time, Freelance, Internship)
+    if ($jobType) {
+        $listings = $listings->filter(function ($listing) use ($jobType) {
+            return strtolower($listing->job_type) === strtolower($jobType);
+        })->values();
+    }
+    
+    // 4. Salary range filter
+    if ($salaryRange) {
+        $listings = $listings->filter(function ($listing) use ($salaryRange) {
+            $salary = $listing->salary;
+            if ($salaryRange === 'Thỏa Thuận') {
+                return $salary == 0;
+            } elseif ($salaryRange === 'Dưới 5 triệu') {
+                return $salary > 0 && $salary < 5000000;
+            } elseif ($salaryRange === '5 - 10 triệu') {
+                return $salary >= 5000000 && $salary <= 10000000;
+            } elseif ($salaryRange === '10 - 15 triệu') {
+                return $salary >= 10000000 && $salary <= 15000000;
+            } elseif ($salaryRange === 'Trên 15 triệu') {
+                return $salary > 15000000;
+            }
+            return true;
+        })->values();
+    }
+    
+    // 5. Sorting
     if ($sort === 'salary_desc') {
         return $listings->sortByDesc('salary')->values();
     } elseif ($sort === 'salary_asc') {
@@ -112,29 +187,35 @@ Route::get('/', function () {
     ]);
 });
 
-// ─── Auth ──────────────────────────────────────────────────────────────────
-Route::get('/login',             fn() => view('user.login'))->name('login');
-Route::get('/register',          fn() => view('user.register'));
-Route::get('/register/employee', fn() => view('user.tim-register'));
-Route::get('/register/employer', fn() => view('user.employer-register'));
-Route::post('/login',            fn() => redirect('/dashboard'));
-Route::post('/register',         fn() => redirect('/dashboard'));
-
-// ─── Subscribe ─────────────────────────────────────────────────────────────
+// Subscribe
 Route::get('/subscribe', fn() => view('subscription.index'));
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PROTECTED-LIKE PAGES (dùng dữ liệu giả để xem UI)
+// AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Fake auth middleware cho preview (các trang không phải CV)
-Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
+Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-    // Dashboard (Tự rẽ nhánh cho Employee, Employer, Admin)
+Route::get('/register', fn() => view('user.register'))->name('register');
+Route::get('/register/employee',  [AuthController::class, 'showRegisterCandidate'])->name('register.candidate');
+Route::post('/register/employee', [AuthController::class, 'registerCandidate'])->name('register.candidate.submit');
+Route::get('/register/employer',  [AuthController::class, 'showRegisterEmployer'])->name('register.employer');
+Route::post('/register/employer', [AuthController::class, 'registerEmployer'])->name('register.employer.submit');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DASHBOARD — Auth thật (tự rẽ nhánh theo user_type)
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/user/profile', fn() => view('user.profile'));
+});
 
-    // Profile
-    Route::get('/user/profile',    fn() => view('user.profile'));
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB MANAGEMENT — Employer
+// ═══════════════════════════════════════════════════════════════════════════
 
     // Jobs
     Route::get('/job',         fn() => view('job.index', ['listings' => getSortedMockListings(), 'total' => 6]));
@@ -144,63 +225,78 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
     Route::get('/job/show/{slug}', fn($slug) => view('job.show', ['listing' => mockListing()]));
     Route::post('/job/store',  fn() => redirect('/job/manage'));
 
-    // Applicants
-    Route::get('/applicants', fn() => view('applicants.index', ['listings' => mockListings(4)]));
-    Route::get('/applicants/{slug}', fn($slug) => view('applicants.view', [
-        'listing'    => mockListing(),
-        'applicants' => new \Illuminate\Pagination\LengthAwarePaginator(
-            collect([mockUser(), mockUser(), mockUser()]),
-            3, 10
-        ),
-    ]));
+// ═══════════════════════════════════════════════════════════════════════════
+// CV BUILDER — Candidate
+// ═══════════════════════════════════════════════════════════════════════════
 
-    // Messages
-    Route::get('/messages',     fn() => view('messages.index',  ['conversations' => collect([])]));
+Route::middleware(['auth', 'candidate'])->group(function () {
+    Route::get('/user/cv',           [UserController::class, 'cv'])->name('user.cv');
+    Route::post('/user/cv',          [UserController::class, 'updateCv'])->name('user.cv.upload')->middleware('throttle:5,1');
+    Route::get('/user/cv/view',      [UserController::class, 'viewCv'])->name('user.cv.view');
+    Route::get('/user/cv/create',    [UserController::class, 'createCv'])->name('user.cv.create');
+    Route::post('/user/cv/preview',  [UserController::class, 'saveCv'])->name('user.cv.save');
+    Route::get('/user/cv/preview',   [UserController::class, 'showPreview'])->name('user.cv.preview');
+    Route::get('/user/cv/download',  [UserController::class, 'downloadPdf'])->name('user.cv.download')->middleware('throttle:10,1');
+    Route::delete('/user/cv/online', [UserController::class, 'deleteOnlineCv'])->name('user.cv.delete');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APPLY & TRACKING — Candidate
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(['auth', 'candidate'])->group(function () {
+    Route::get('/apply/{listingId}',      [ApplicationController::class, 'showForm'])->name('apply.form');
+    Route::post('/apply',             [ApplicationController::class, 'apply'])->name('apply.submit');
+    Route::get('/candidate/history',  [ApplicationController::class, 'candidateHistory'])->name('candidate.history');
+    Route::get('/candidate/applications/{id}', [ApplicationController::class, 'candidateApplicationDetail'])->name('candidate.application.detail');
+
+    Route::get('/payment/token',          [PaymentController::class, 'tokenPurchasePage'])->name('payment.token');
+    Route::post('/payment/token',         [PaymentController::class, 'initiateTokenPurchase'])->name('payment.token.initiate');
+    Route::get('/payment/token/callback', [PaymentController::class, 'tokenCallback'])->name('payment.token.callback');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EMPLOYER PANEL
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(['auth', 'employer'])->group(function () {
+    Route::get('/employer/jobs/{listingId}/applicants',    [ApplicationController::class, 'applicantList'])->name('employer.applicants');
+    Route::get('/employer/applications/{id}',          [ApplicationController::class, 'viewDetail'])->name('employer.application.detail');
+    Route::patch('/employer/applications/{id}/status', [ApplicationController::class, 'updateStatus'])->name('employer.application.status');
+
+    Route::get('/payment/subscription',          [PaymentController::class, 'subscriptionPage'])->name('payment.subscription');
+    Route::post('/payment/subscription',         [PaymentController::class, 'initiateSubscription'])->name('payment.subscription.initiate');
+    Route::get('/payment/subscription/callback', [PaymentController::class, 'subscriptionCallback'])->name('payment.subscription.callback');
+    Route::get('/employer/subscription',         [PaymentController::class, 'subscriptionStatus'])->name('employer.subscription.status');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADMIN — FakeAuth chỉ còn dùng cho preview admin panel
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
+    Route::get('/applicants', fn() => view('applicants.index', ['listings' => collect([])]));
+    Route::get('/applicants/{slug}', fn($slug) => view('applicants.view', [
+        'listing'    => (object)['id'=>1,'title'=>'Demo','slug'=>$slug,'user'=>(object)['id'=>999,'name'=>'Demo'],'users'=>collect([])],
+        'applicants' => new \Illuminate\Pagination\LengthAwarePaginator(collect([]), 0, 10),
+    ]));
+    Route::get('/messages',      fn() => view('messages.index',  ['conversations' => collect([])]));
     Route::get('/messages/{id}', fn($id) => view('messages.show', [
         'conversations' => collect([]),
-        'conversation'  => (object)[
-            'id' => $id,
-            'listing' => mockListing(),
-            'employee' => mockUser('employee'),
-            'employer' => mockUser('employer'),
-            'messages' => collect([]),
-        ],
-        'messages' => collect([]),
+        'conversation'  => (object)['id'=>$id,'listing'=>null,'employee'=>null,'employer'=>null,'messages'=>collect([])],
+        'messages'      => collect([]),
     ]));
-
-    // Admin Panel (Được điều khiển động từ AdminController)
-    Route::get('/admin', [DashboardController::class, 'index']);
-    
-    // Quản lý phân quyền chức năng
-    Route::get('/admin/users', [AdminController::class, 'users']);
-    Route::post('/admin/users/{id}/role', [AdminController::class, 'updateRole']);
-    Route::post('/admin/users/{id}/plan', [AdminController::class, 'updatePlan']);
-    Route::post('/admin/users/{id}/ban', [AdminController::class, 'toggleBan']);
-    
-    // Quản lý phân quyền dữ liệu
-    Route::get('/admin/permissions', [AdminController::class, 'permissions']);
-    Route::post('/admin/permissions/transfer/{id}', [AdminController::class, 'transferOwnership']);
-    
-    // Quản lý tin tuyển dụng toàn hệ thống
-    Route::get('/admin/jobs', [AdminController::class, 'jobs']);
-    Route::delete('/admin/jobs/{id}', [AdminController::class, 'deleteJob']);
+    Route::get('/admin',                             [DashboardController::class, 'index']);
+    Route::get('/admin/users',                       [AdminController::class, 'users']);
+    Route::post('/admin/users/{id}/role',            [AdminController::class, 'updateRole']);
+    Route::post('/admin/users/{id}/plan',            [AdminController::class, 'updatePlan']);
+    Route::post('/admin/users/{id}/ban',             [AdminController::class, 'toggleBan']);
+    Route::get('/admin/permissions',                 [AdminController::class, 'permissions']);
+    Route::post('/admin/permissions/transfer/{id}',  [AdminController::class, 'transferOwnership']);
+    Route::get('/admin/jobs',                        [AdminController::class, 'jobs']);
+    Route::delete('/admin/jobs/{id}',                [AdminController::class, 'deleteJob']);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CV BUILDER — Protected routes (middleware thật)
-// ═══════════════════════════════════════════════════════════════════════════
-
-Route::middleware(['auth', 'verified', 'employee'])->group(function () {
-    // Upload CV
-    Route::get('/user/cv',          [UserController::class, 'cv'])->name('user.cv');
-    Route::post('/user/cv',         [UserController::class, 'updateCv'])->name('user.cv.upload')->middleware('throttle:5,1');
-    Route::get('/user/cv/view',     [UserController::class, 'viewCv'])->name('user.cv.view');
-
-    // Online CV
-    Route::get('/user/cv/create',   [UserController::class, 'createCv'])->name('user.cv.create');
-    Route::post('/user/cv/preview', [UserController::class, 'saveCv'])->name('user.cv.save');
-    Route::get('/user/cv/preview',  [UserController::class, 'showPreview'])->name('user.cv.preview');
-    Route::get('/user/cv/download', [UserController::class, 'downloadPdf'])->name('user.cv.download')->middleware('throttle:10,1');
-    Route::delete('/user/cv/online',[UserController::class, 'deleteOnlineCv'])->name('user.cv.delete');
-});
-
+// ─── VNPay IPN (server-to-server, không cần auth) ─────────────────────────
+Route::post('/payment/token/ipn',        [PaymentController::class, 'tokenIpn'])->name('payment.token.ipn');
+Route::post('/payment/subscription/ipn', [PaymentController::class, 'subscriptionIpn'])->name('payment.subscription.ipn');

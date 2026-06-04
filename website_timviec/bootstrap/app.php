@@ -12,7 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            // Alias cũ (giữ lại để không break CV builder routes)
             'employee' => \App\Http\Middleware\EnsureEmployee::class,
+
+            // Alias mới cho phân quyền đúng role
+            'candidate' => \App\Http\Middleware\EnsureCandidate::class,
+            'employer'  => \App\Http\Middleware\EnsureEmployer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

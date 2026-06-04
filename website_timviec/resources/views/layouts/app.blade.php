@@ -23,12 +23,14 @@
       <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
       @auth
         @if(auth()->user()->user_type === 'employer')
-          <a href="{{ url('/job/create') }}">Đăng tuyển</a>
-          <a href="{{ url('/applicants') }}">Ứng viên</a>
-          <a href="{{ url('/dashboard') }}">Dashboard</a>
+          <a href="{{ route('job.create') }}">Đăng tuyển</a>
+          <a href="{{ route('job.manage') }}">Quản lý tin</a>
+          <a href="{{ route('employer.subscription.status') }}">Gói Premium</a>
+          <a href="{{ route('dashboard') }}">Dashboard</a>
         @else
-          <a href="{{ url('/user/cv') }}">Hồ sơ CV</a>
-          <a href="{{ url('/applicants') }}">Việc đã nộp</a>
+          <a href="{{ route('user.cv') }}">Hồ sơ CV</a>
+          <a href="{{ route('candidate.history') }}">Việc đã nộp</a>
+          <a href="{{ route('payment.token') }}">Mua lượt</a>
         @endif
         <a href="{{ url('/messages') }}">
           <i class="fas fa-comment-dots"></i> Tin nhắn
@@ -39,7 +41,7 @@
       @auth
         <div class="flex gap-8" style="align-items:center">
           @if(auth()->user()->user_type === 'employer' && !auth()->user()->billing_ends)
-            <a href="{{ url('/subscribe') }}" class="btn btn-outline btn-sm">
+            <a href="{{ route('payment.subscription') }}" class="btn btn-outline btn-sm">
               <i class="fas fa-crown"></i> Nâng cấp
             </a>
           @endif
@@ -60,8 +62,18 @@
                 <i class="fas fa-user fa-fw"></i> Tài khoản
               </a>
               @if(auth()->user()->user_type === 'employer')
-                <a href="{{ url('/dashboard') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
+                <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
                   <i class="fas fa-chart-bar fa-fw"></i> Dashboard
+                </a>
+                <a href="{{ route('employer.subscription.status') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
+                  <i class="fas fa-crown fa-fw"></i> Gói Premium
+                </a>
+              @else
+                <a href="{{ route('candidate.history') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
+                  <i class="fas fa-history fa-fw"></i> Lịch sử ứng tuyển
+                </a>
+                <a href="{{ route('payment.token') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
+                  <i class="fas fa-ticket-alt fa-fw"></i> Mua lượt ứng tuyển
                 </a>
               @endif
               <form action="{{ url('/logout') }}" method="POST">

@@ -44,7 +44,7 @@
               {{ $listing->salary == 0 ? 'Thỏa thuận' : number_format($listing->salary).'đ' }}
             </td>
             <td>
-              <a href="{{ url('/applicants/'.$listing->slug) }}" class="flex gap-4" style="align-items:center;color:var(--text-secondary);font-size:13px">
+              <a href="{{ route('employer.applicants', $listing->id) }}" class="flex gap-4" style="align-items:center;color:var(--text-secondary);font-size:13px">
                 <i class="fas fa-users" style="color:var(--primary)"></i>
                 <span class="fw-700" style="color:var(--primary)">{{ $listing->users->count() }}</span> người
               </a>
@@ -60,7 +60,7 @@
             <td>
               <div class="flex gap-6">
                 <a href="{{ url('/job/'.$listing->id.'/edit') }}" class="btn btn-outline btn-sm" title="Chỉnh sửa"><i class="fas fa-edit"></i></a>
-                <a href="{{ url('/applicants/'.$listing->slug) }}" class="btn btn-primary btn-sm" title="Xem ứng viên"><i class="fas fa-users"></i></a>
+                <a href="{{ route('employer.applicants', $listing->id) }}" class="btn btn-primary btn-sm" title="Xem ứng viên"><i class="fas fa-users"></i></a>
                 <a href="{{ url('/job/'.$listing->id.'/delete') }}"
                   onclick="return confirm('Xoá tin này?')"
                   class="btn btn-danger btn-sm" title="Xoá"><i class="fas fa-trash"></i></a>
