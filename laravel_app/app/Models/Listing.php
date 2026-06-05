@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Listing extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -78,5 +79,49 @@ class Listing extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(ListingAuditLog::class);
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopePendingReview($query)
+    {
+        return $query->where('status', 'pending_review');
+    }
+
+    public function scopeByEmployer($query, User $user)
+    {
+        return $query->where('user_id', $user->id);
+    }
+
+    public function scopeSearch($query, string $keyword)
+    {
+        return $query->whereFullText(['title', 'description'], $keyword);
+    }
+
+    // Accessors
+    public function getFormattedSalaryAttribute(): string
+    {
+        if ($this->is_negotiable) {
+            return 'Thỏa thuận';
+        }
+
+        if ($this->hide_salary) {
+            return 'Liên hệ';
+        }
+
+        if ($this->salary_min && $this->salary_max) {
+            return number_format($this->salary_min) . ' - ' . number_format($this->salary_max) . ' VNĐ';
+        }
+
+        return 'Chưa xác định';
+    }
+
+    public function getDaysUntilExpiryAttribute(): int
+    {
+        return now()->diffInDays($this->application_close_date, false);
     }
 }

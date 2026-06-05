@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -61,7 +62,10 @@ return new class extends Migration
             $table->index(['user_id', 'status']);
             $table->index(['status', 'application_close_date']);
             $table->index(['scheduled_at']);
-            $table->fullText(['title', 'description'], 'listing_search_fulltext');
+            
+            if (DB::getDriverName() !== 'sqlite') {
+                $table->fullText(['title', 'description'], 'listing_search_fulltext');
+            }
         });
     }
 

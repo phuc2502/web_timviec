@@ -21,6 +21,18 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'banned_at')) {
                 $table->timestamp('banned_at')->nullable();
             }
+            if (!Schema::hasColumn('users', 'user_type')) {
+                $table->string('user_type')->default('candidate');
+            }
+            if (!Schema::hasColumn('users', 'is_admin')) {
+                $table->boolean('is_admin')->default(false);
+            }
+            if (!Schema::hasColumn('users', 'status')) {
+                $table->string('status')->default('trial');
+            }
+            if (!Schema::hasColumn('users', 'user_trial')) {
+                $table->timestamp('user_trial')->nullable();
+            }
         });
     }
 
@@ -38,6 +50,18 @@ return new class extends Migration
             }
             if (Schema::hasColumn('users', 'banned_at')) {
                 $table->dropColumn('banned_at');
+            }
+            if (Schema::hasColumn('users', 'user_type')) {
+                $table->dropColumn('user_type');
+            }
+            if (Schema::hasColumn('users', 'is_admin')) {
+                $table->dropColumn('is_admin');
+            }
+            if (Schema::hasColumn('users', 'status')) {
+                $table->dropColumn('status');
+            }
+            if (Schema::hasColumn('users', 'user_trial')) {
+                $table->dropColumn('user_trial');
             }
         });
     }

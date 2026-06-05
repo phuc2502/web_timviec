@@ -23,7 +23,7 @@ class SendListingStatusNotification
         // Send email based on status
         match($event->newStatus) {
             'active' => Mail::to($user)->queue(new ListingApprovedMail($listing)),
-            'rejected' => Mail::to($user)->queue(new ListingRejectedMail($listing)),
+            'rejected' => Mail::to($user)->queue(new ListingRejectedMail($listing, $listing->rejection_reason ?? 'Vi phạm điều khoản chính sách.')),
             'expired' => Mail::to($user)->queue(new ListingExpiredMail($listing)),
             default => null
         };
