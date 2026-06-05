@@ -21,15 +21,108 @@ class JobController extends Controller
                   ->orWhere('application_close_date', '>=', now());
             });
 
-        // ── 1. Keyword: tìm trên title, description, roles, predes ──────
-        $keyword = $request->filled('keyword') ? $request->keyword
-                 : ($request->filled('search')  ? $request->search : null);
+        // ── 1. Keyword: tìm kiếm TOÀN DIỆN trên tất cả trường liên quan ──
+        $keyword = $request->filled('keyword') ? trim($request->keyword)
+                 : ($request->filled('search')  ? trim($request->search) : null);
+
         if ($keyword) {
-            $query->where(function ($q) use ($keyword) {
-                $q->where('title',       'like', '%' . $keyword . '%')
-                  ->orWhere('description','like', '%' . $keyword . '%')
-                  ->orWhere('roles',      'like', '%' . $keyword . '%')
-                  ->orWhere('predes',     'like', '%' . $keyword . '%');
+            // Chuẩn hóa keyword để tìm kiếm (lowercase để so sánh)
+            $kw = $keyword;
+
+            // Map từ khóa tiếng Việt phổ biến sang giá trị DB
+            $jobTypeMaps = [
+                'toàn thời gian' => 'Full-time',
+                'toan thoi gian' => 'Full-time',
+                'full time'      => 'Full-time',
+                'fulltime'       => 'Full-time',
+                'bán thời gian'  => 'Part-time',
+                'ban thoi gian'  => 'Part-time',
+                'part time'      => 'Part-time',
+                'parttime'       => 'Part-time',
+                'thực tập'       => 'Internship',
+                'thuc tap'       => 'Internship',
+                'intern'         => 'Internship',
+                'thực tập sinh'  => 'Internship',
+                'freelance'      => 'Freelance',
+                'tự do'          => 'Freelance',
+                'tu do'          => 'Freelance',
+                'remote'         => 'Remote',
+                'từ xa'          => 'Remote',
+                'tu xa'          => 'Remote',
+            ];
+
+            $workModeMaps = [
+                'văn phòng'  => 'onsite',
+                'van phong'  => 'onsite',
+                'onsite'     => 'onsite',
+                'tại chỗ'    => 'onsite',
+                'tai cho'    => 'onsite',
+                'hybrid'     => 'hybrid',
+                'kết hợp'    => 'hybrid',
+                'ket hop'    => 'hybrid',
+                'remote'     => 'remote',
+                'làm từ xa'  => 'remote',
+                'lam tu xa'  => 'remote',
+                'làm ở nhà'  => 'remote',
+                'lam o nha'  => 'remote',
+            ];
+
+            $levelMaps = [
+                'intern'        => 'intern',
+                'thực tập'      => 'intern',
+                'thuc tap'      => 'intern',
+                'fresher'       => 'fresher',
+                'mới ra trường' => 'fresher',
+                'moi ra truong' => 'fresher',
+                'junior'        => 'junior',
+                'trẻ'           => 'junior',
+                'tre'           => 'junior',
+                'middle'        => 'middle',
+                'mid'           => 'middle',
+                'senior'        => 'senior',
+                'cao cấp'       => 'senior',
+                'cao cap'       => 'senior',
+                'lead'          => 'lead',
+                'trưởng nhóm'   => 'lead',
+                'truong nhom'   => 'lead',
+                'manager'       => 'lead',
+                'quản lý'       => 'lead',
+                'quan ly'       => 'lead',
+            ];
+
+            // Tìm giá trị DB tương ứng từ keyword
+            $kwLower          = mb_strtolower($kw);
+            $mappedJobType    = $jobTypeMaps[$kwLower]  ?? null;
+            $mappedWorkMode   = $workModeMaps[$kwLower] ?? null;
+            $mappedLevel      = $levelMaps[$kwLower]    ?? null;
+
+            $query->where(function ($q) use ($kw, $mappedJobType, $mappedWorkMode, $mappedLevel) {
+                // Trường text trực tiếp trong listings
+                $q->where('title',       'like', '%' . $kw . '%')
+                  ->orWhere('description','like', '%' . $kw . '%')
+                  ->orWhere('requirements','like', '%' . $kw . '%')
+                  ->orWhere('benefits',    'like', '%' . $kw . '%')
+                  ->orWhere('address',    'like', '%' . $kw . '%')
+                  ->orWhere('job_type',   'like', '%' . $kw . '%')
+                  ->orWhere('work_mode',  'like', '%' . $kw . '%')
+                  ->orWhere('job_level',  'like', '%' . $kw . '%');
+
+                // Tìm theo tên công ty / tên nhà tuyển dụng (join users)
+                $q->orWhereHas('user', function ($uq) use ($kw) {
+                    $uq->where('company_name', 'like', '%' . $kw . '%')
+                       ->orWhere('name',        'like', '%' . $kw . '%');
+                });
+
+                // Map tiếng Việt → giá trị enum trong DB
+                if ($mappedJobType) {
+                    $q->orWhere('job_type', $mappedJobType);
+                }
+                if ($mappedWorkMode) {
+                    $q->orWhere('work_mode', $mappedWorkMode);
+                }
+                if ($mappedLevel) {
+                    $q->orWhere('job_level', $mappedLevel);
+                }
             });
         }
 
@@ -64,9 +157,11 @@ class JobController extends Controller
         if ($request->filled('exp_range')) {
             match ($request->exp_range) {
                 'Chưa có KN'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', 0)),
-                'Dưới 1 năm'   => $query->where('experience_years_min', '<=', 1),
-                '1 - 3 năm'    => $query->where('experience_years_min', '<=', 3)->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 1)),
-                '3 - 5 năm'    => $query->where('experience_years_min', '<=', 5)->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 3)),
+                'Dưới 1 năm'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '<=', 1)),
+                '1 - 3 năm'    => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '<=', 3))
+                                        ->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 1)),
+                '3 - 5 năm'    => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '<=', 5))
+                                        ->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 3)),
                 'Trên 5 năm'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '>=', 5)),
                 default        => null,
             };
@@ -99,7 +194,6 @@ class JobController extends Controller
     {
         $listing = Listing::with(['user', 'users'])->where('slug', $slug)->firstOrFail();
 
-        // Kiểm tra ứng viên đã nộp đơn chưa (dùng bảng applications mới)
         $existingApplication = null;
         if (auth()->check() && auth()->user()->user_type === 'employee') {
             $existingApplication = \App\Models\Application::where('user_id', auth()->id())
@@ -143,11 +237,15 @@ class JobController extends Controller
                 'title'                 => $request->title,
                 'slug'                  => Str::slug($request->title) . '-' . Str::random(6),
                 'description'           => $request->description,
-                'roles'                 => $request->roles,
-                'predes'                => $request->predes,
+                'requirements'          => $request->requirements,
+                'benefits'              => $request->benefits,
                 'salary'                => $request->salary ?? 0,
                 'address'               => $request->address,
                 'job_type'              => $request->job_type,
+                'work_mode'             => $request->work_mode ?? 'onsite',
+                'job_level'             => $request->job_level,
+                'experience_years_min'  => $request->experience_years_min,
+                'experience_years_max'  => $request->experience_years_max,
                 'application_close_date'=> $request->application_close_date,
             ]);
 
@@ -207,11 +305,15 @@ class JobController extends Controller
             $listing->update([
                 'title'                 => $request->title,
                 'description'           => $request->description,
-                'roles'                 => $request->roles,
-                'predes'                => $request->predes,
+                'requirements'          => $request->requirements,
+                'benefits'              => $request->benefits,
                 'salary'                => $request->salary ?? 0,
                 'address'               => $request->address,
                 'job_type'              => $request->job_type,
+                'work_mode'             => $request->work_mode ?? $listing->work_mode,
+                'job_level'             => $request->job_level ?? $listing->job_level,
+                'experience_years_min'  => $request->experience_years_min ?? $listing->experience_years_min,
+                'experience_years_max'  => $request->experience_years_max ?? $listing->experience_years_max,
                 'application_close_date'=> $request->application_close_date,
             ]);
 
