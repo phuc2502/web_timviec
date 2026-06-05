@@ -12,30 +12,34 @@ return new class extends Migration
     public function up(): void
     {
         // 1. Bảng tin tuyển dụng
-        Schema::create('listings', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // Employer
-            $table->string('title');
-            $table->string('slug')->unique();
-            $table->text('description')->nullable();
-            $table->text('roles')->nullable();
-            $table->text('predes')->nullable();
-            $table->unsignedBigInteger('salary')->nullable();
-            $table->string('address')->nullable();
-            $table->string('job_type')->nullable();
-            $table->string('feature_image')->nullable();
-            $table->timestamp('application_close_date')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('listings')) {
+            Schema::create('listings', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // Employer
+                $table->string('title');
+                $table->string('slug')->unique();
+                $table->text('description')->nullable();
+                $table->text('roles')->nullable();
+                $table->text('predes')->nullable();
+                $table->unsignedBigInteger('salary')->nullable();
+                $table->string('address')->nullable();
+                $table->string('job_type')->nullable();
+                $table->string('feature_image')->nullable();
+                $table->timestamp('application_close_date')->nullable();
+                $table->timestamps();
+            });
+        }
 
         // 2. Bảng trung gian ứng tuyển (listing_user)
-        Schema::create('listing_user', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('listing_id')->constrained('listings')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // Employee applicant
-            $table->boolean('shortlisted')->default(false);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('listing_user')) {
+            Schema::create('listing_user', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('listing_id')->constrained('listings')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // Employee applicant
+                $table->boolean('shortlisted')->default(false);
+                $table->timestamps();
+            });
+        }
     }
 
     /**

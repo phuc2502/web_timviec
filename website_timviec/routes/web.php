@@ -56,7 +56,6 @@ function mockListing($id = 1) {
 // ─── Mock Job List ─────────────────────────────────────────────────────────
 function mockListings($n = 30) {
     $jobPool = [
-        // --- Hà Nội ---
         ['title'=>'Senior PHP / Laravel Developer',    'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>35000000, 'exp_min'=>3, 'exp_max'=>7,  'job_level'=>'senior',  'roles'=>'Tối thiểu 3 năm kinh nghiệm PHP/Laravel, thành thạo MySQL, Redis, Docker, Git, CI/CD'],
         ['title'=>'Technical Lead - Java Spring Boot', 'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>50000000, 'exp_min'=>5, 'exp_max'=>10, 'job_level'=>'lead',    'roles'=>'Tối thiểu 5 năm kinh nghiệm Java Spring Boot, kinh nghiệm kiến trúc hệ thống lớn'],
         ['title'=>'DevOps Engineer',                   'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>40000000, 'exp_min'=>3, 'exp_max'=>6,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm DevOps, thành thạo Docker Kubernetes AWS Linux'],
@@ -67,7 +66,6 @@ function mockListings($n = 30) {
         ['title'=>'Intern Frontend (React/Vue)',       'address'=>'Hà Nội',      'job_type'=>'Internship', 'work_mode'=>'onsite',  'salary'=>3000000,  'exp_min'=>0, 'exp_max'=>0,  'job_level'=>'intern',  'roles'=>'Sinh viên năm 3-4 ngành CNTT, biết cơ bản HTML CSS JavaScript ReactJS hoặc VueJS'],
         ['title'=>'Data Analyst (SQL + Python)',       'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>22000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm phân tích dữ liệu, thành thạo SQL Python Pandas Tableau'],
         ['title'=>'Network Security Engineer',         'address'=>'Hà Nội',      'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>28000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm bảo mật mạng, kinh nghiệm với firewall IDS/IPS penetration testing'],
-        // --- Hồ Chí Minh ---
         ['title'=>'Frontend Developer (ReactJS)',      'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>28000000, 'exp_min'=>2, 'exp_max'=>4,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm ReactJS, thành thạo Redux TypeScript REST API'],
         ['title'=>'Backend Developer Python/Django',   'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'remote',  'salary'=>20000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm Python Django, biết PostgreSQL Redis Docker'],
         ['title'=>'iOS Developer (Swift)',             'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>32000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm iOS Swift, kinh nghiệm publish App Store, biết SwiftUI'],
@@ -78,13 +76,11 @@ function mockListings($n = 30) {
         ['title'=>'Database Administrator (MySQL)',    'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>25000000, 'exp_min'=>3, 'exp_max'=>6,  'job_level'=>'senior',  'roles'=>'3+ năm kinh nghiệm MySQL DBA, thành thạo query optimization replication backup'],
         ['title'=>'Scrum Master / Agile Coach',       'address'=>'Hồ Chí Minh', 'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>38000000, 'exp_min'=>3, 'exp_max'=>7,  'job_level'=>'senior',  'roles'=>'3+ năm kinh nghiệm Scrum Master, chứng chỉ CSM hoặc PSM, kinh nghiệm coaching team Agile'],
         ['title'=>'Intern Data Science',              'address'=>'Hồ Chí Minh', 'job_type'=>'Internship', 'work_mode'=>'onsite',  'salary'=>4000000,  'exp_min'=>0, 'exp_max'=>0,  'job_level'=>'intern',  'roles'=>'Sinh viên năm 3-4 ngành Toán Tin hoặc CNTT, biết Python cơ bản và thống kê'],
-        // --- Đà Nẵng ---
         ['title'=>'Mobile Developer (Flutter)',        'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>25000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm Flutter Dart, biết tích hợp REST API Firebase'],
         ['title'=>'Unity Game Developer',             'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>20000000, 'exp_min'=>1, 'exp_max'=>4,  'job_level'=>'middle',  'roles'=>'1+ năm kinh nghiệm Unity C#, có game đã publish là lợi thế'],
         ['title'=>'Full-stack PHP Developer',         'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'hybrid',  'salary'=>18000000, 'exp_min'=>1, 'exp_max'=>3,  'job_level'=>'junior',  'roles'=>'1+ năm kinh nghiệm PHP Laravel, biết HTML CSS JavaScript MySQL'],
         ['title'=>'Embedded Systems Engineer',        'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>22000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm lập trình nhúng C/C++, kinh nghiệm với STM32 Arduino Linux Embedded'],
         ['title'=>'Fresher Backend Laravel',          'address'=>'Đà Nẵng',     'job_type'=>'Full-time',  'work_mode'=>'onsite',  'salary'=>8000000,  'exp_min'=>0, 'exp_max'=>1,  'job_level'=>'fresher', 'roles'=>'Fresher hoặc dưới 1 năm kinh nghiệm PHP Laravel, tốt nghiệp đại học CNTT'],
-        // --- Remote ---
         ['title'=>'Remote Senior NodeJS Developer',   'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>0,        'exp_min'=>4, 'exp_max'=>8,  'job_level'=>'senior',  'roles'=>'4+ năm kinh nghiệm NodeJS, thành thạo microservices Docker AWS, lương thỏa thuận hấp dẫn'],
         ['title'=>'Remote TypeScript Developer',      'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>30000000, 'exp_min'=>2, 'exp_max'=>5,  'job_level'=>'middle',  'roles'=>'2+ năm kinh nghiệm TypeScript ReactJS hoặc NodeJS, có thể làm việc độc lập'],
         ['title'=>'Remote Cloud Architect (AWS)',     'address'=>'Remote',       'job_type'=>'Remote',     'work_mode'=>'remote',  'salary'=>60000000, 'exp_min'=>5, 'exp_max'=>10, 'job_level'=>'lead',    'roles'=>'5+ năm kinh nghiệm AWS cloud architecture, chứng chỉ AWS Solutions Architect'],
@@ -140,7 +136,6 @@ function getSortedMockListings() {
 
     $listings = mockListings(30);
 
-    // 1. Keyword — tìm trên title, roles, predes, description
     if ($keyword !== '') {
         $listings = $listings->filter(function ($listing) use ($keyword) {
             $kw = mb_strtolower($keyword);
@@ -151,28 +146,24 @@ function getSortedMockListings() {
         })->values();
     }
 
-    // 2. Địa điểm
     if ($address) {
         $listings = $listings->filter(function ($listing) use ($address) {
             return mb_stripos($listing->address, $address) !== false;
         })->values();
     }
 
-    // 3. Loại hình
     if ($jobType) {
         $listings = $listings->filter(function ($listing) use ($jobType) {
             return mb_strtolower($listing->job_type) === mb_strtolower($jobType);
         })->values();
     }
 
-    // 4. Work mode
     if ($workMode) {
         $listings = $listings->filter(function ($listing) use ($workMode) {
             return mb_strtolower($listing->work_mode ?? '') === mb_strtolower($workMode);
         })->values();
     }
 
-    // 5. Khoảng lương
     if ($salaryRange) {
         $listings = $listings->filter(function ($listing) use ($salaryRange) {
             $s = $listing->salary;
@@ -187,7 +178,6 @@ function getSortedMockListings() {
         })->values();
     }
 
-    // 6. Kinh nghiệm
     if ($expRange) {
         $listings = $listings->filter(function ($listing) use ($expRange) {
             $min = $listing->experience_years_min ?? 0;
@@ -203,14 +193,12 @@ function getSortedMockListings() {
         })->values();
     }
 
-    // 7. Cấp độ
     if ($jobLevel) {
         $listings = $listings->filter(function ($listing) use ($jobLevel) {
             return mb_strtolower($listing->job_level ?? '') === mb_strtolower($jobLevel);
         })->values();
     }
 
-    // 8. Sắp xếp
     return match ($sort) {
         'salary_desc'  => $listings->sortByDesc('salary')->values(),
         'salary_asc'   => $listings->sort(function ($a, $b) {
@@ -227,15 +215,7 @@ function getSortedMockListings() {
 // PUBLIC PAGES
 // ═══════════════════════════════════════════════════════════════════════════
 
-Route::get('/', function () {
-    $listings = getSortedMockListings();
-    return view('job.index', [
-        'listings'  => $listings,
-        'totalJobs' => 30,
-    ]);
-});
-
-// Subscribe
+Route::get('/', [JobController::class, 'index']);
 Route::get('/subscribe', fn() => view('subscription.index'));
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -253,31 +233,33 @@ Route::get('/register/employer',  [AuthController::class, 'showRegisterEmployer'
 Route::post('/register/employer', [AuthController::class, 'registerEmployer'])->name('register.employer.submit');
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DASHBOARD — Auth thật (tự rẽ nhánh theo user_type)
+// AUTH REQUIRED
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/user/profile', fn() => view('user.profile'));
+
+    // ── Messages ──────────────────────────────────────────────────────────
+    Route::get('/messages',            [\App\Http\Controllers\MessageController::class, 'index'])->name('messages.index');
+    Route::post('/messages/start',     [\App\Http\Controllers\MessageController::class, 'findOrCreate'])->name('messages.start');
+    Route::get('/messages/{id}',       [\App\Http\Controllers\MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{id}/send', [\App\Http\Controllers\MessageController::class, 'store'])->name('messages.store')->middleware('throttle:30,1');
+    Route::get('/messages/{id}/poll',  [\App\Http\Controllers\MessageController::class, 'poll'])->name('messages.poll');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOB MANAGEMENT — Employer
+// JOB ROUTES
 // ═══════════════════════════════════════════════════════════════════════════
 
-    // Jobs
-    Route::get('/job', function () {
-        $listings = getSortedMockListings();
-        return view('job.index', [
-            'listings'  => $listings,
-            'totalJobs' => 30,
-        ]);
-    });
-    Route::get('/job/create',  fn() => view('job.create'));
-    Route::get('/job/manage',  fn() => view('job.manage', ['listings' => mockListings(4)]));
-    Route::get('/job/{id}/edit', fn($id) => view('job.edit', ['listing' => mockListing($id)]));
-    Route::get('/job/show/{slug}', fn($slug) => view('job.show', ['listing' => mockListing()]));
-    Route::post('/job/store',  fn() => redirect('/job/manage'));
+Route::get('/job',               [JobController::class, 'index'])->name('job.index');
+Route::get('/job/create',        [JobController::class, 'create'])->name('job.create');
+Route::get('/job/manage',        [JobController::class, 'manage'])->name('job.manage');
+Route::get('/job/show/{slug}',   [JobController::class, 'show'])->name('job.show');
+Route::post('/job/store',        [JobController::class, 'store'])->name('job.store');
+Route::get('/job/{id}/edit',     [JobController::class, 'edit'])->name('job.edit');
+Route::put('/job/{id}/update',   [JobController::class, 'update'])->name('job.update');
+Route::delete('/job/{id}/delete',[JobController::class, 'destroy'])->name('job.destroy');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CV BUILDER — Candidate
@@ -299,9 +281,9 @@ Route::middleware(['auth', 'candidate'])->group(function () {
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::middleware(['auth', 'candidate'])->group(function () {
-    Route::get('/apply/{listingId}',      [ApplicationController::class, 'showForm'])->name('apply.form');
-    Route::post('/apply',             [ApplicationController::class, 'apply'])->name('apply.submit');
-    Route::get('/candidate/history',  [ApplicationController::class, 'candidateHistory'])->name('candidate.history');
+    Route::get('/apply/{listingId}',           [ApplicationController::class, 'showForm'])->name('apply.form');
+    Route::post('/apply',                      [ApplicationController::class, 'apply'])->name('apply.submit');
+    Route::get('/candidate/history',           [ApplicationController::class, 'candidateHistory'])->name('candidate.history');
     Route::get('/candidate/applications/{id}', [ApplicationController::class, 'candidateApplicationDetail'])->name('candidate.application.detail');
 
     Route::get('/payment/token',          [PaymentController::class, 'tokenPurchasePage'])->name('payment.token');
@@ -315,8 +297,8 @@ Route::middleware(['auth', 'candidate'])->group(function () {
 
 Route::middleware(['auth', 'employer'])->group(function () {
     Route::get('/employer/jobs/{listingId}/applicants',    [ApplicationController::class, 'applicantList'])->name('employer.applicants');
-    Route::get('/employer/applications/{id}',          [ApplicationController::class, 'viewDetail'])->name('employer.application.detail');
-    Route::patch('/employer/applications/{id}/status', [ApplicationController::class, 'updateStatus'])->name('employer.application.status');
+    Route::get('/employer/applications/{id}',              [ApplicationController::class, 'viewDetail'])->name('employer.application.detail');
+    Route::patch('/employer/applications/{id}/status',     [ApplicationController::class, 'updateStatus'])->name('employer.application.status');
 
     Route::get('/payment/subscription',          [PaymentController::class, 'subscriptionPage'])->name('payment.subscription');
     Route::post('/payment/subscription',         [PaymentController::class, 'initiateSubscription'])->name('payment.subscription.initiate');
@@ -325,21 +307,17 @@ Route::middleware(['auth', 'employer'])->group(function () {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ADMIN — FakeAuth chỉ còn dùng cho preview admin panel
+// ADMIN
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
     Route::get('/applicants', fn() => view('applicants.index', ['listings' => collect([])]));
-    Route::get('/applicants/{slug}', fn($slug) => view('applicants.view', [
-        'listing'    => (object)['id'=>1,'title'=>'Demo','slug'=>$slug,'user'=>(object)['id'=>999,'name'=>'Demo'],'users'=>collect([])],
-        'applicants' => new \Illuminate\Pagination\LengthAwarePaginator(collect([]), 0, 10),
-    ]));
-    Route::get('/messages',      fn() => view('messages.index',  ['conversations' => collect([])]));
-    Route::get('/messages/{id}', fn($id) => view('messages.show', [
-        'conversations' => collect([]),
-        'conversation'  => (object)['id'=>$id,'listing'=>null,'employee'=>null,'employer'=>null,'messages'=>collect([])],
-        'messages'      => collect([]),
-    ]));
+    Route::get('/applicants/{slug}', function($slug) {
+    $listing = \App\Models\Listing::with(['user', 'users'])->where('slug', $slug)->firstOrFail();
+    $applicants = $listing->users()->paginate(10);
+    return view('applicants.view', compact('listing', 'applicants'));
+});
+   
     Route::get('/admin',                             [DashboardController::class, 'index']);
     Route::get('/admin/users',                       [AdminController::class, 'users']);
     Route::post('/admin/users/{id}/role',            [AdminController::class, 'updateRole']);
@@ -351,6 +329,6 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
     Route::delete('/admin/jobs/{id}',                [AdminController::class, 'deleteJob']);
 });
 
-// ─── VNPay IPN (server-to-server, không cần auth) ─────────────────────────
+// ─── VNPay IPN ────────────────────────────────────────────────────────────
 Route::post('/payment/token/ipn',        [PaymentController::class, 'tokenIpn'])->name('payment.token.ipn');
 Route::post('/payment/subscription/ipn', [PaymentController::class, 'subscriptionIpn'])->name('payment.subscription.ipn');

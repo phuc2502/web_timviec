@@ -11,9 +11,21 @@
       <h1 class="fw-700 fs-24" style="color:var(--secondary)">📄 Chi tiết đơn ứng tuyển</h1>
       <p class="text-muted fs-13 mt-8">{{ $application->user->name }} → {{ $application->listing->title }}</p>
     </div>
-    <a href="{{ route('employer.applicants', $application->listing_id) }}" class="btn btn-outline btn-sm">
-      <i class="fas fa-arrow-left fa-fw"></i> Về danh sách ứng viên
-    </a>
+    <div class="flex gap-8" style="align-items: center;">
+      @if(auth()->check() && auth()->user()->isEmployer())
+        <form action="{{ route('messages.start') }}" method="POST" style="margin: 0;">
+          @csrf
+          <input type="hidden" name="listing_id" value="{{ $application->listing_id }}">
+          <input type="hidden" name="employee_id" value="{{ $application->user_id }}">
+          <button type="submit" class="btn btn-outline btn-sm">
+            <i class="fas fa-comment"></i> Nhắn tin với ứng viên
+          </button>
+        </form>
+      @endif
+      <a href="{{ route('employer.applicants', $application->listing_id) }}" class="btn btn-outline btn-sm">
+        <i class="fas fa-arrow-left fa-fw"></i> Về danh sách ứng viên
+      </a>
+    </div>
   </div>
 
   @if(session('success'))

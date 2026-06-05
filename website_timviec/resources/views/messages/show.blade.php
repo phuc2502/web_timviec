@@ -112,6 +112,30 @@ if (textarea) {
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
   });
 }
+
+// Poll new messages
+let lastId = {{ $messages->last()?->id ?? 0 }};
+if (container) {
+  setInterval(function () {
+    fetch(`/messages/{{ $conversation->id }}/poll?after=${lastId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.messages || data.messages.length === 0) return;
+        data.messages.forEach(m => {
+          const isSent = m.sender_id === {{ auth()->id() }};
+          const div = document.createElement('div');
+          div.className = 'msg-bubble ' + (isSent ? 'sent' : 'received');
+          div.innerHTML = `<div class="msg-bubble__text"></div>
+                           <div class="msg-bubble__time"></div>`;
+          div.querySelector('.msg-bubble__text').textContent = m.body;
+          div.querySelector('.msg-bubble__time').textContent = m.created_at;
+          container.appendChild(div);
+        });
+        lastId = data.messages[data.messages.length - 1].id;
+        container.scrollTop = container.scrollHeight;
+      });
+  }, 5000);
+}
 </script>
 @endpush
 @endsection

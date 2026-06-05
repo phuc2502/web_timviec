@@ -46,7 +46,7 @@
 
           <div class="divider mt-20"></div>
 
-          <div class="flex gap-10">
+          <div class="flex gap-10" style="align-items: flex-start;">
             @auth
               @if(auth()->user()->user_type === 'employee')
                 @if($existingApplication)
@@ -71,13 +71,23 @@
                     <i class="fas fa-paper-plane fa-fw"></i> Ứng tuyển ngay
                   </a>
                 @endif
+
+                @if(auth()->check() && auth()->user()->isCandidate())
+                  <form action="{{ route('messages.start') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="listing_id" value="{{ $listing->id }}">
+                    <button type="submit" class="btn btn-outline btn-lg">
+                      <i class="fas fa-comment"></i> Nhắn tin với NTD
+                    </button>
+                  </form>
+                @endif
               @endif
             @else
               <a href="{{ url('/login') }}" class="btn btn-primary btn-lg">
                 <i class="fas fa-paper-plane fa-fw"></i> Đăng nhập để ứng tuyển
               </a>
             @endauth
-            <button class="btn btn-outline" onclick="shareJob()"><i class="fas fa-share-alt"></i> Chia sẻ</button>
+            <button class="btn btn-outline btn-lg" onclick="shareJob()"><i class="fas fa-share-alt"></i> Chia sẻ</button>
           </div>
         </div>
       </div>
