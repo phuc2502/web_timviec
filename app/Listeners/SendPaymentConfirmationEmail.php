@@ -4,29 +4,24 @@ namespace App\Listeners;
 
 use App\Events\PaymentSucceeded;
 use App\Mail\PaymentConfirmationMail;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Gửi email xác nhận thanh toán — chạy async qua queue.
+ * Gửi email xác nhận thanh toán thành công.
  */
-class SendPaymentConfirmationEmail implements ShouldQueue
+class SendPaymentConfirmationEmail
 {
-    public int $tries = 3;
-
     public function handle(PaymentSucceeded $event): void
     {
         $user = $event->payment->user;
 
-        if (! $user->mail) {
-            return; // user tắt email
-        }
-
         try {
-            Mail::to($user->email)->queue(new PaymentConfirmationMail($event->payment));
+            Mail::to($user->email)->send(new PaymentConfirmationMail($event->payment));
+
+            Log::info("PaymentConfirmationMail sent to {$user->email} for payment #{$event->payment->id}");
         } catch (\Throwable $e) {
-            Log::error("SendPaymentConfirmationEmail: queue failed cho user {$user->id}: " . $e->getMessage());
+            Log::error("SendPaymentConfirmationEmail failed for user {$user->id}: " . $e->getMessage());
         }
     }
 }
