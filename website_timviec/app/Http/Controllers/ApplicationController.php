@@ -26,13 +26,21 @@ class ApplicationController extends Controller
         $listing   = Listing::findOrFail($listingId);
         $candidate = auth()->user();
 
-        // Đơn ứng tuyển hiện tại của job này (nếu re-apply)
-        $existingApp = \App\Models\Application::with('cv')
+        // Tất cả lần ứng tuyển của ứng viên cho job này (theo thứ tự round)
+        $allApps = \App\Models\Application::with('cv')
             ->where('user_id', $candidate->id)
             ->where('listing_id', $listingId)
-            ->first();
+            ->orderBy('id')
+            ->get();
 
-        // suggestedCv: ưu tiên CV của đơn job này (re-apply), sau đó CV gần nhất toàn hệ thống
+        // Bản ghi lần ứng tuyển gần nhất (dùng cho autofill & isReapply)
+        $existingApp = $allApps->last(); // NULL nếu chưa ứng tuyển lần nào
+        // apply_round = tổng số lần đã bấm nộp (kể cả các lần update)
+        $applyCount  = $existingApp ? ($existingApp->apply_round ?? 1) : 0;
+        // Hồ sơ bị khoá: status ≠ submitted → không cho ứng tuyển lại
+        $isStatusLocked = $existingApp && $existingApp->status !== 'submitted';
+
+        // suggestedCv: ưu tiên CV của lần ứng tuyển gần nhất job này
         if ($existingApp && $existingApp->cv) {
             $suggestedCv = $existingApp->cv;
         } else {
@@ -53,11 +61,14 @@ class ApplicationController extends Controller
         ];
 
         return view('application.form', [
-            'listing'     => $listing,
-            'listingId'   => $listingId,
-            'suggestedCv' => $suggestedCv,
-            'autofill'    => $autofill,
-            'existingApp' => $existingApp,
+            'listing'        => $listing,
+            'listingId'      => $listingId,
+            'suggestedCv'    => $suggestedCv,
+            'autofill'       => $autofill,
+            'existingApp'    => $existingApp,
+            'applyCount'     => $applyCount,
+            'maxRounds'      => \App\Models\Application::MAX_APPLY_ROUNDS,
+            'isStatusLocked' => $isStatusLocked,
         ]);
     }
 
@@ -76,9 +87,18 @@ class ApplicationController extends Controller
                 ->with('success', 'Ứng tuyển thành công!');
 
         } catch (\RuntimeException $e) {
-            // Giới hạn free account: hiển thị thông báo riêng
+            // Giới hạn free account
             if (str_starts_with($e->getMessage(), '__FREE_LIMIT__:')) {
                 return back()->with('error', 'Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm. Vui lòng tìm việc khác.');
+            }
+            // Hồ sơ đã được NTD xử lý, không cho ứng tuyển lại
+            if (str_starts_with($e->getMessage(), '__STATUS_LOCKED__:')) {
+                $msg = str_replace('__STATUS_LOCKED__:', '', $e->getMessage());
+                return back()->with('error', trim($msg));
+            }
+            // Vượt quá giới hạn 3 lần ứng tuyển
+            if (str_starts_with($e->getMessage(), '__MAX_REAPPLY__:')) {
+                return back()->with('error', 'Bạn đã ứng tuyển tối đa ' . \App\Models\Application::MAX_APPLY_ROUNDS . ' lần cho vị trí này.');
             }
             return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
