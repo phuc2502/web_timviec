@@ -1,0 +1,217 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\ApplyJobRequest;
+use App\Models\Application;
+use App\Http\Requests\UpdateApplicationStatusRequest;
+use App\Models\Listing;
+use App\Services\ApplicationService;
+use App\Services\NotificationService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class ApplicationController extends Controller
+{
+    public function __construct(
+        private readonly ApplicationService $service,
+        private readonly NotificationService $notif,
+    ) {}
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PHÍA ỨNG VIÊN
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * GET /apply/{listingId} — Form ứng tuyển, tự động gợi ý CV gần nhất.
+     */
+    public function showForm(int $listingId)
+    {
+        $listing   = Listing::findOrFail($listingId);
+        $candidate = auth()->user();
+
+        // Đơn ứng tuyển hiện tại của job này (nếu re-apply)
+        $existingApp = \App\Models\Application::with('cv')
+            ->where('user_id', $candidate->id)
+            ->where('listing_id', $listingId)
+            ->first();
+
+        // suggestedCv: ưu tiên CV của đơn job này (re-apply), sau đó CV gần nhất toàn hệ thống
+        if ($existingApp && $existingApp->cv) {
+            $suggestedCv = $existingApp->cv;
+        } else {
+            $suggestedCv = $this->service->suggestLatestCv($candidate);
+        }
+
+        // Autofill: ưu tiên thông tin đã lưu trong đơn job này,
+        // sau đó đơn gần nhất bất kỳ, cuối cùng mới lấy từ user profile
+        $sourceApp = $existingApp ?? \App\Models\Application::where('user_id', $candidate->id)
+            ->orderByDesc('applied_at')
+            ->first();
+
+        $autofill = [
+            'name'         => $sourceApp?->applicant_name  ?? $candidate->name,
+            'email'        => $sourceApp?->applicant_email ?? $candidate->email,
+            'phone'        => $sourceApp?->applicant_phone ?? $candidate->phone ?? '',
+            'cover_letter' => $existingApp?->cover_letter  ?? '',
+        ];
+
+        return view('application.form', [
+            'listing'     => $listing,
+            'listingId'   => $listingId,
+            'suggestedCv' => $suggestedCv,
+            'autofill'    => $autofill,
+            'existingApp' => $existingApp,
+        ]);
+    }
+
+    /**
+     * POST /apply — Xử lý ứng tuyển công việc.
+     */
+    public function apply(ApplyJobRequest $request)
+    {
+        $candidate = auth()->user();
+
+        try {
+            $application = $this->service->apply($candidate, $request->validated());
+
+            return redirect()
+                ->route('candidate.history')
+                ->with('success', 'Ứng tuyển thành công!');
+
+        } catch (\RuntimeException $e) {
+            // Giới hạn free account: hiển thị thông báo riêng
+            if (str_starts_with($e->getMessage(), '__FREE_LIMIT__:')) {
+                return back()->with('error', 'Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm. Vui lòng tìm việc khác.');
+            }
+            return back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error("Apply job failed: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+        }
+    }
+
+    /**
+     * GET /candidate/history — Lịch sử ứng tuyển của ứng viên.
+     */
+    public function candidateHistory()
+    {
+        $candidate    = auth()->user();
+        $applications = $this->service->candidateHistory($candidate);
+
+        return view('application.history', compact('applications'));
+    }
+
+    /**
+     * GET /candidate/applications/{id} — Ứng viên xem chi tiết đơn của chính mình.
+     */
+    public function candidateApplicationDetail(int $applicationId)
+    {
+        $candidate   = auth()->user();
+        $application = Application::with(['listing.user', 'cv'])
+            ->where('user_id', $candidate->id)
+            ->findOrFail($applicationId);
+
+        return view('application.candidate-detail', compact('application'));
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PHÍA NHÀ TUYỂN DỤNG
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * GET /employer/jobs/{listingId}/applicants — Danh sách ứng viên theo listing.
+     */
+    public function applicantList(Request $request, int $listingId)
+    {
+        $employer     = auth()->user();
+        $applications = $this->service->listByJob($employer, $listingId);
+        $listing      = \App\Models\Listing::with('user')->findOrFail($listingId);
+
+        return view('application.applicant-list', compact('applications', 'listingId', 'listing'));
+    }
+
+    /**
+     * GET /employer/applications/{id} — Chi tiết CV ứng viên.
+     * Tự động chuyển trạng thái submitted → viewed.
+     */
+    public function viewDetail(int $applicationId)
+    {
+        $employer = auth()->user();
+
+        try {
+            $application = $this->service->viewApplicationDetail($employer, $applicationId);
+            return view('application.detail', compact('application'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            abort(404, 'Đơn ứng tuyển không tồn tại hoặc không thuộc quyền quản lý của bạn.');
+        }
+    }
+
+    /**
+     * PATCH /employer/applications/{id}/status — Cập nhật trạng thái ứng tuyển.
+     */
+    public function updateStatus(UpdateApplicationStatusRequest $request, int $applicationId)
+    {
+        $employer  = auth()->user();
+        $validated = $request->validated();
+        $newStatus = $validated['status'];
+        $extra     = ['interview_scheduled_at' => $validated['interview_scheduled_at'] ?? null];
+
+        try {
+            $this->service->updateStatus($employer, $applicationId, $newStatus, $extra);
+
+            return back()->with('success', 'Cập nhật trạng thái thành công!');
+
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error("UpdateStatus failed: " . $e->getMessage());
+            return back()->with('error', 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // SHORTLIST TOGGLE
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * POST /shortlist/{listingId}/{applicantId}
+     * Toggle shortlist cho ứng viên — employer only.
+     * Gửi in-app notification + email nếu shortlist (không gửi khi bỏ shortlist).
+     */
+    public function toggleShortlist(int $listingId, int $applicantId)
+    {
+        $employer = auth()->user();
+
+        // Kiểm tra listing thuộc về employer này
+        $listing = Listing::where('user_id', $employer->id)->findOrFail($listingId);
+
+        // Pivot record trên bảng listing_user
+        $pivot = $listing->users()->where('user_id', $applicantId)->first();
+
+        if (! $pivot) {
+            return back()->with('error', 'Ứng viên không tồn tại trong danh sách ứng tuyển.');
+        }
+
+        $isCurrentlyShortlisted = (bool) $pivot->pivot->shortlisted;
+        $newValue               = ! $isCurrentlyShortlisted;
+
+        // Cập nhật pivot
+        $listing->users()->updateExistingPivot($applicantId, ['shortlisted' => $newValue]);
+
+        // Gửi thông báo khi shortlist (không gửi khi bỏ shortlist)
+        if ($newValue) {
+            $applicant = \App\Models\User::find($applicantId);
+            if ($applicant) {
+                try {
+                    $this->notif->notifyShortlisted($applicant, $listing->load('user'));
+                } catch (\Exception $e) {
+                    Log::warning("notifyShortlisted failed: " . $e->getMessage());
+                }
+            }
+        }
+
+        $msg = $newValue ? '✅ Đã shortlist ứng viên.' : 'Đã bỏ shortlist ứng viên.';
+        return back()->with('success', $msg);
+    }
+}
