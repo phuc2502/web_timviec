@@ -26,9 +26,10 @@
 
       <select name="status" class="form-control" style="width:140px; font-size:13px; cursor:pointer;">
         <option value="">Tất cả trạng thái</option>
-        <option value="open"   {{ request('status') === 'open'   ? 'selected' : '' }}>🟢 Đang mở</option>
-        <option value="hidden" {{ request('status') === 'hidden' ? 'selected' : '' }}>🔘 Tạm ẩn</option>
-        <option value="closed" {{ request('status') === 'closed' ? 'selected' : '' }}>🔴 Đã đóng</option>
+        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>🟡 Chờ duyệt</option>
+        <option value="open"    {{ request('status') === 'open'    ? 'selected' : '' }}>🟢 Đang mở</option>
+        <option value="hidden"  {{ request('status') === 'hidden'  ? 'selected' : '' }}>🔘 Tạm ẩn</option>
+        <option value="closed"  {{ request('status') === 'closed'  ? 'selected' : '' }}>🔴 Đã đóng</option>
       </select>
 
       <button type="submit" class="btn btn-primary btn-sm" style="padding:0 14px; height:38px;">
@@ -109,7 +110,11 @@
 
           {{-- Trạng thái --}}
           <td style="text-align:center;">
-            @if($job->status === 'open')
+            @if(($job->status ?? 'pending') === 'pending')
+              <span style="font-size:11px; font-weight:600; background:#fffbeb; color:#d97706; border:1px solid #fef3c7; padding:2px 8px; border-radius:4px;">
+                Chờ duyệt
+              </span>
+            @elseif($job->status === 'open')
               <span style="font-size:11px; font-weight:600; background:#ecfdf5; color:#10b981; border:1px solid #d1fae5; padding:2px 8px; border-radius:4px;">
                 Đang mở
               </span>
@@ -143,7 +148,7 @@
 
           {{-- Thao tác --}}
           <td style="text-align:center;">
-            <div style="display:flex; gap:6px; justify-content:center;">
+            <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap; align-items:center;">
               {{-- Nút xem chi tiết --}}
               <button onclick="openJobModal({{ $job->id }})" title="Xem chi tiết"
                 style="border:none; background:#eff6ff; color:#3b82f6; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; transition:all .15s;"
@@ -151,6 +156,42 @@
                 onmouseout="this.style.background='#eff6ff';this.style.color='#3b82f6';">
                 <i class="fas fa-eye"></i>
               </button>
+
+              {{-- Nút duyệt tin / Đổi trạng thái --}}
+              @if(($job->status ?? 'pending') === 'pending')
+                <form action="{{ url('/admin/jobs/'.$job->id.'/status') }}" method="POST" style="margin:0;">
+                  @csrf
+                  <input type="hidden" name="status" value="open">
+                  <button type="submit" title="Duyệt tin đăng"
+                    style="border:none; background:#ecfdf5; color:#10b981; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; transition:all .15s; display:flex; align-items:center; gap:4px;"
+                    onmouseover="this.style.background='#10b981';this.style.color='#fff';"
+                    onmouseout="this.style.background='#ecfdf5';this.style.color='#10b981';">
+                    <i class="fas fa-check"></i> Duyệt
+                  </button>
+                </form>
+              @else
+                <form action="{{ url('/admin/jobs/'.$job->id.'/status') }}" method="POST" style="margin:0;">
+                  @csrf
+                  @if($job->status === 'open')
+                    <input type="hidden" name="status" value="hidden">
+                    <button type="submit" title="Tạm ẩn tin"
+                      style="border:none; background:#f1f5f9; color:#64748b; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; transition:all .15s;"
+                      onmouseover="this.style.background='#64748b';this.style.color='#fff';"
+                      onmouseout="this.style.background='#f1f5f9';this.style.color='#64748b';">
+                      <i class="fas fa-eye-slash"></i>
+                    </button>
+                  @else
+                    <input type="hidden" name="status" value="open">
+                    <button type="submit" title="Mở tin"
+                      style="border:none; background:#ecfdf5; color:#10b981; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; transition:all .15s;"
+                      onmouseover="this.style.background='#10b981';this.style.color='#fff';"
+                      onmouseout="this.style.background='#ecfdf5';this.style.color='#10b981';">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  @endif
+                </form>
+              @endif
+
               {{-- Nút xóa --}}
               <form action="{{ url('/admin/jobs/'.$job->id) }}" method="POST" style="margin:0;"
                 onsubmit="return confirm('Xóa tin \"{{ addslashes($job->title) }}\"?\nKhông thể hoàn tác!')">
@@ -347,6 +388,7 @@ function openJobModal(id) {
     // Status badge
     const sBadge = document.getElementById('jStatusBadge');
     const statusMap = {
+      pending:['🟡 Chờ duyệt', '#fffbeb', '#d97706'],
       open:   ['🟢 Đang mở', '#ecfdf5', '#10b981'],
       hidden: ['🔘 Tạm ẩn',  '#f1f5f9', '#64748b'],
       closed: ['🔴 Đã đóng', '#fef2f2', '#ef4444'],

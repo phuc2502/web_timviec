@@ -21,15 +21,18 @@
     <div class="navbar-nav">
       <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}">Trang chủ</a>
       @auth
-        @if(auth()->user()->user_type !== 'employer')
-          <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
-        @endif
-        @if(auth()->user()->user_type === 'employer')
+        @if(auth()->user()->user_type === 'admin' || auth()->user()->is_admin)
+          <a href="{{ url('/admin') }}" class="{{ request()->is('admin') ? 'active' : '' }}">Trang quản trị (Admin)</a>
+          <a href="{{ url('/admin/users') }}">Quản lý thành viên</a>
+          <a href="{{ url('/admin/jobs') }}">Quản lý tin đăng</a>
+          <a href="{{ url('/admin/transactions') }}">Lịch sử giao dịch</a>
+        @elseif(auth()->user()->user_type === 'employer')
           <a href="{{ route('job.create') }}">Đăng tuyển</a>
           <a href="{{ route('job.manage') }}">Quản lý tin</a>
           <a href="{{ route('employer.subscription.status') }}">Gói Premium</a>
           <a href="{{ route('dashboard') }}">Dashboard</a>
         @else
+          <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
           <a href="{{ route('user.cv') }}">Hồ sơ CV</a>
           <a href="{{ route('candidate.history') }}">Việc đã nộp</a>
           <a href="{{ route('payment.token') }}">Mua lượt</a>
@@ -87,7 +90,11 @@
               <a href="{{ url('/user/profile') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
                 <i class="fas fa-user fa-fw"></i> Tài khoản
               </a>
-              @if(auth()->user()->user_type === 'employer')
+              @if(auth()->user()->user_type === 'admin' || auth()->user()->is_admin)
+                <a href="{{ url('/admin') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
+                  <i class="fas fa-shield-alt fa-fw"></i> Admin Panel
+                </a>
+              @elseif(auth()->user()->user_type === 'employer')
                 <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:14px;color:var(--text-secondary);transition:var(--transition)" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
                   <i class="fas fa-chart-bar fa-fw"></i> Dashboard
                 </a>

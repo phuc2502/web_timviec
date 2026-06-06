@@ -35,14 +35,12 @@
 
       {{-- NHÀ TUYỂN DỤNG --}}
       <a href="{{ route('register.employer') }}" class="role-card role-card-employer" id="card-employer">
-        <div class="role-card__badge" style="background:#fff3e0;color:#e65100;border-color:#ffcc80">🎁 7 ngày dùng thử</div>
         <div class="role-card__icon" style="background:#fff3e0;color:#e65100">
           <i class="fas fa-building"></i>
         </div>
         <h3 class="role-card__title" style="color:#e65100">Nhà tuyển dụng</h3>
         <p class="role-card__desc">Đăng tin tuyển dụng, tìm kiếm nhân tài IT xuất sắc cho công ty một cách nhanh chóng và hiệu quả.</p>
         <ul class="role-card__list">
-          <li><i class="fas fa-check" style="color:#e65100"></i> 7 ngày dùng thử miễn phí</li>
           <li><i class="fas fa-check" style="color:#e65100"></i> Đăng tin không giới hạn</li>
           <li><i class="fas fa-check" style="color:#e65100"></i> Quản lý ứng viên dễ dàng</li>
           <li><i class="fas fa-check" style="color:#e65100"></i> Nhắn tin trực tiếp</li>

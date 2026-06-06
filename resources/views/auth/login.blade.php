@@ -140,7 +140,7 @@
 .social-btn-github:hover { background: #1a1f24; box-shadow: 0 2px 8px rgba(0,0,0,.2); text-decoration: none; color: #fff; }
 
 .auth-divider {
-  position: relative; text-align: center; margin: 0 0 24px;
+  position: relative; text-align: center; margin: 20px 0 24px;
 }
 .auth-divider::before {
   content: ''; position: absolute; top: 50%; left: 0; right: 0;

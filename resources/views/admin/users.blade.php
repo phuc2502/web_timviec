@@ -63,15 +63,11 @@
             </div>
           </td>
           <td>
-            <form action="{{ url('/admin/users/'.$user->id.'/role') }}" method="POST" style="margin:0;">
-              @csrf
-              <select name="user_type" class="form-control"
-                style="font-size:11px; padding:4px 8px; height:auto; cursor:pointer;" onchange="this.form.submit()">
-                <option value="employee" {{ $user->user_type === 'employee' ? 'selected' : '' }}>👤 Ứng viên</option>
-                <option value="employer" {{ $user->user_type === 'employer' ? 'selected' : '' }}>🏢 Doanh nghiệp</option>
-                <option value="admin"    {{ $user->user_type === 'admin'    ? 'selected' : '' }}>🔑 Admin</option>
-              </select>
-            </form>
+            @php
+              $roleMap = ['employee'=>['label'=>'👤 Ứng viên','bg'=>'#eff6ff','color'=>'#3b82f6'],'employer'=>['label'=>'🏢 Doanh nghiệp','bg'=>'#fff7ed','color'=>'#c2410c'],'admin'=>['label'=>'🔑 Admin','bg'=>'#f5f3ff','color'=>'#7c3aed']];
+              $r = $roleMap[$user->user_type] ?? ['label'=>$user->user_type,'bg'=>'#f1f5f9','color'=>'#475569'];
+            @endphp
+            <span style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:5px; background:{{$r['bg']}}; color:{{$r['color']}}">{{ $r['label'] }}</span>
           </td>
           <td>
             @if($user->email_verified_at)
@@ -81,14 +77,11 @@
             @endif
           </td>
           <td>
-            <form action="{{ url('/admin/users/'.$user->id.'/plan') }}" method="POST" style="margin:0;">
-              @csrf
-              <select name="plan" class="form-control"
-                style="font-size:11px; padding:4px 8px; height:auto; cursor:pointer;" onchange="this.form.submit()">
-                <option value="trial"   {{ $user->plan === 'trial'   ? 'selected' : '' }}>Dùng thử</option>
-                <option value="premium" {{ $user->plan === 'premium' ? 'selected' : '' }}>👑 Premium</option>
-              </select>
-            </form>
+            @php
+              $planMap = ['free'=>['label'=>'Mặc định (Free)','bg'=>'#f1f5f9','color'=>'#475569'],'trial'=>['label'=>'Dùng thử','bg'=>'#fffbeb','color'=>'#d97706'],'premium'=>['label'=>'👑 Premium','bg'=>'#fdf4ff','color'=>'#9333ea']];
+              $p = $planMap[$user->plan ?? 'free'] ?? ['label'=>'Mặc định (Free)','bg'=>'#f1f5f9','color'=>'#475569'];
+            @endphp
+            <span style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:5px; background:{{$p['bg']}}; color:{{$p['color']}}">{{ $p['label'] }}</span>
           </td>
           <td class="text-muted fs-12">{{ $user->created_at->format('d/m/Y') }}</td>
           <td style="text-align:center;">
