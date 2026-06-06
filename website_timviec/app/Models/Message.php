@@ -7,11 +7,28 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
-    protected $fillable = ['conversation_id', 'sender_id', 'body', 'read_at'];
+    protected $fillable = [
+        'conversation_id',
+        'sender_id',
+        'body',
+        'read_at',
+        'attachment_path',
+        'attachment_name',
+        'email_notified'
+    ];
 
     protected $casts = [
         'read_at' => 'datetime',
+        'email_notified' => 'boolean',
     ];
+
+    /**
+     * Get the interview invitation associated with the message.
+     */
+    public function interviewInvitation(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(InterviewInvitation::class, 'message_id');
+    }
 
     /**
      * Get the conversation that owns the message.

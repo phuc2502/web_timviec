@@ -255,6 +255,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/messages/{id}/send', [\App\Http\Controllers\MessageController::class, 'store'])->name('messages.store')->middleware('throttle:30,1');
     Route::get('/messages/{id}/poll',  [\App\Http\Controllers\MessageController::class, 'poll'])->name('messages.poll');
     Route::delete('/messages/{id}',    [\App\Http\Controllers\MessageController::class, 'destroy'])->name('messages.destroy');
+    Route::post('/messages/{id}/restore', [\App\Http\Controllers\MessageController::class, 'restore'])->name('messages.restore');
+    Route::post('/messages/interviews/{id}/respond', [\App\Http\Controllers\MessageController::class, 'respondToInterview'])->name('messages.interview.respond');
+    Route::get('/messages/quick-replies/list',       [\App\Http\Controllers\MessageController::class, 'getQuickReplies'])->name('messages.quick_replies');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

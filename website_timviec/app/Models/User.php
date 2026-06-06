@@ -19,6 +19,7 @@ class User extends Authenticatable
         'user_type', 'profile_pic', 'resume', 'about',
         'company_name', 'company_logo', 'plan',
         'billing_ends', 'user_trial', 'is_banned',
+        'last_seen_at',
     ];
 
     protected $guarded = [];
@@ -33,7 +34,16 @@ class User extends Authenticatable
             'user_trial'        => 'datetime',
             'password'          => 'hashed',
             'is_banned'         => 'boolean',
+            'last_seen_at'      => 'datetime',
         ];
+    }
+
+    /**
+     * Check if the user is currently online.
+     */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->greaterThanOrEqualTo(now()->subMinutes(5));
     }
 
     // ─── Relationships (trả về collection rỗng khi preview) ────────────────

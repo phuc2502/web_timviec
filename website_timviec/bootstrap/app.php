@@ -11,6 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\UpdateUserActivity::class,
+        ]);
+
         $middleware->alias([
             // Alias cũ (giữ lại để không break CV builder routes)
             'employee' => \App\Http\Middleware\EnsureEmployee::class,
