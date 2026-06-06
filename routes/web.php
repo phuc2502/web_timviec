@@ -1,6 +1,9 @@
 <?php
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminController;
@@ -22,19 +25,74 @@ Route::get('/job/show/{slug}', [JobController::class, 'show']);
 // Subscribe
 Route::get('/subscribe', fn() => view('subscription.index'));
 
+// Legal Pages
+Route::get('/terms',   fn() => view('legal.terms'))->name('terms');
+Route::get('/privacy', fn() => view('legal.privacy'))->name('privacy');
+
 // ═══════════════════════════════════════════════════════════════════════════
-// AUTH ROUTES
+// AUTH ROUTES (Guest only)
 // ═══════════════════════════════════════════════════════════════════════════
 
-Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+Route::middleware('guest')->group(function () {
 
-Route::get('/register', fn() => view('user.register'))->name('register');
-Route::get('/register/employee',  [AuthController::class, 'showRegisterCandidate'])->name('register.candidate');
-Route::post('/register/employee', [AuthController::class, 'registerCandidate'])->name('register.candidate.submit');
-Route::get('/register/employer',  [AuthController::class, 'showRegisterEmployer'])->name('register.employer');
-Route::post('/register/employer', [AuthController::class, 'registerEmployer'])->name('register.employer.submit');
+    // Login
+    Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+
+    // Register — chọn role
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+
+    // Register employee
+    Route::get('/register/employee',  [AuthController::class, 'showRegisterEmployee'])->name('register.employee');
+    Route::post('/register/employee', [AuthController::class, 'registerEmployee'])->name('register.employee.submit');
+
+    // Register employer
+    Route::get('/register/employer',  [AuthController::class, 'showRegisterEmployer'])->name('register.employer');
+    Route::post('/register/employer', [AuthController::class, 'registerEmployer'])->name('register.employer.submit');
+
+    // Forgot / Reset Password
+    Route::get('/forgot-password',         [PasswordResetController::class, 'showForgotForm'])->name('password.request');
+    Route::post('/forgot-password',        [PasswordResetController::class, 'sendResetLink'])->name('password.email');
+    Route::get('/reset-password/{token}',  [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password',         [PasswordResetController::class, 'resetPassword'])->name('password.update');
+
+    // Google OAuth
+    Route::get('/auth/google',          [GoogleController::class, 'redirect'])->name('auth.google');
+    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('auth.google.callback');
+    Route::get('/auth/google/register/{role}', [GoogleController::class, 'redirectWithRole'])->name('auth.google.register')->where('role', 'employee|employer');
+
+    // GitHub OAuth
+    Route::get('/auth/github',          [App\Http\Controllers\Auth\GithubController::class, 'redirect'])->name('auth.github');
+    Route::get('/auth/github/callback', [App\Http\Controllers\Auth\GithubController::class, 'callback'])->name('auth.github.callback');
+    Route::get('/auth/github/register/{role}', [App\Http\Controllers\Auth\GithubController::class, 'redirectWithRole'])->name('auth.github.register')->where('role', 'employee|employer');
+
+    // Social OAuth — chọn role cho user mới
+    Route::get('/auth/{provider}/choose-role', function (string $provider) {
+        if (!session('social_pending') || session('social_pending.provider') !== $provider) {
+            return redirect()->route('login')->withErrors(['email' => 'Phiên đăng ký đã hết hạn.']);
+        }
+        return view('auth.social-choose-role', ['provider' => $provider]);
+    })->name('auth.social.choose-role')->where('provider', 'google|github');
+
+    Route::get('/auth/{provider}/role/{role}', function (string $provider, string $role) {
+        if ($provider === 'google') {
+            return app(App\Http\Controllers\Auth\GoogleController::class)->completeRegistration($role);
+        }
+        return app(App\Http\Controllers\Auth\GithubController::class)->completeRegistration($role);
+    })->name('auth.social.role')->where('provider', 'google|github')->where('role', 'employee|employer');
+});
+
+// Logout (Auth only)
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->name('logout')
+    ->middleware('auth');
+
+// Email Verification
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify',                     [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}',         [EmailVerificationController::class, 'verify'])->name('verification.verify')->middleware('signed');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])->name('verification.send')->middleware('throttle:6,1');
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DASHBOARD — Auth thật (tự rẽ nhánh theo user_type)
@@ -88,21 +146,21 @@ Route::middleware(['auth', 'candidate'])->group(function () {
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::middleware(['auth', 'candidate'])->group(function () {
-    Route::get('/apply/{listingId}',      [ApplicationController::class, 'showForm'])->name('apply.form');
-    Route::post('/apply',             [ApplicationController::class, 'apply'])->name('apply.submit');
-    Route::get('/candidate/history',  [ApplicationController::class, 'candidateHistory'])->name('candidate.history');
-    Route::get('/candidate/applications/{id}', [ApplicationController::class, 'candidateApplicationDetail'])->name('candidate.application.detail');
+    Route::get('/apply/{listingId}',            [ApplicationController::class, 'showForm'])->name('apply.form');
+    Route::post('/apply',                       [ApplicationController::class, 'apply'])->name('apply.submit');
+    Route::get('/candidate/history',            [ApplicationController::class, 'candidateHistory'])->name('candidate.history');
+    Route::get('/candidate/applications/{id}',  [ApplicationController::class, 'candidateApplicationDetail'])->name('candidate.application.detail');
+
+    Route::get('/payment/token',          [PaymentController::class, 'tokenPurchasePage'])->name('payment.token');
+    Route::post('/payment/token',         [PaymentController::class, 'initiateTokenPurchase'])->name('payment.token.initiate');
+    Route::get('/payment/token/callback', [PaymentController::class, 'tokenCallback'])->name('payment.token.callback');
+});
 
 // ── Notifications (tất cả user đã đăng nhập)
 Route::middleware('auth')->group(function () {
     Route::get('/notifications',           [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/{id}/read',[\App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifications.read');
-});
-
-    Route::get('/payment/token',          [PaymentController::class, 'tokenPurchasePage'])->name('payment.token');
-    Route::post('/payment/token',         [PaymentController::class, 'initiateTokenPurchase'])->name('payment.token.initiate');
-    Route::get('/payment/token/callback', [PaymentController::class, 'tokenCallback'])->name('payment.token.callback');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
