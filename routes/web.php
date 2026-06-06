@@ -180,7 +180,34 @@ Route::middleware(['auth', 'employer'])->group(function () {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ADMIN — FakeAuth chỉ còn dùng cho preview admin panel
+// ADMIN — yêu cầu đăng nhập (AdminController tự kiểm tra user_type === 'admin')
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/',                              [DashboardController::class, 'index'])->name('dashboard');
+
+    // Users
+    Route::get('/users',                         [AdminController::class, 'users'])->name('users');
+    Route::get('/users/{id}/detail',             [AdminController::class, 'userDetail'])->name('users.detail');
+    Route::post('/users/{id}/role',              [AdminController::class, 'updateRole'])->name('users.role');
+    Route::post('/users/{id}/plan',              [AdminController::class, 'updatePlan'])->name('users.plan');
+    Route::post('/users/{id}/ban',               [AdminController::class, 'toggleBan'])->name('users.ban');
+
+    // Permissions
+    Route::get('/permissions',                   [AdminController::class, 'permissions'])->name('permissions');
+    Route::post('/permissions/transfer/{id}',    [AdminController::class, 'transferOwnership'])->name('permissions.transfer');
+
+    // Jobs
+    Route::get('/jobs',                          [AdminController::class, 'jobs'])->name('jobs');
+    Route::get('/jobs/{id}/detail',              [AdminController::class, 'jobDetail'])->name('jobs.detail');
+    Route::delete('/jobs/{id}',                  [AdminController::class, 'deleteJob'])->name('jobs.delete');
+
+    // Transactions
+    Route::get('/transactions',                  [AdminController::class, 'transactions'])->name('transactions');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LEGACY PREVIEW — FakeAuth (applicants, messages)
 // ═══════════════════════════════════════════════════════════════════════════
 
 Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
@@ -195,15 +222,6 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
         'conversation'  => (object)['id'=>$id,'listing'=>null,'employee'=>null,'employer'=>null,'messages'=>collect([])],
         'messages'      => collect([]),
     ]));
-    Route::get('/admin',                             [DashboardController::class, 'index']);
-    Route::get('/admin/users',                       [AdminController::class, 'users']);
-    Route::post('/admin/users/{id}/role',            [AdminController::class, 'updateRole']);
-    Route::post('/admin/users/{id}/plan',            [AdminController::class, 'updatePlan']);
-    Route::post('/admin/users/{id}/ban',             [AdminController::class, 'toggleBan']);
-    Route::get('/admin/permissions',                 [AdminController::class, 'permissions']);
-    Route::post('/admin/permissions/transfer/{id}',  [AdminController::class, 'transferOwnership']);
-    Route::get('/admin/jobs',                        [AdminController::class, 'jobs']);
-    Route::delete('/admin/jobs/{id}',                [AdminController::class, 'deleteJob']);
 });
 
 // ─── VNPay IPN (server-to-server, không cần auth) ─────────────────────────
