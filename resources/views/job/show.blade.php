@@ -80,9 +80,44 @@
                       <div class="fs-12" style="color:#A36000;margin-top:2px">Nhà tuyển dụng đang xem xét các đơn hiện có.</div>
                     </div>
                   </div>
+                @elseif($isStatusLocked ?? false)
+                  {{-- Hồ sơ đã được NTD xử lý: không cho ứng tuyển lại --}}
+                  @php
+                    $lockedStatus = $existingApplication->status ?? '';
+                    $lockedLabel  = \App\Models\Application::STATUS_LABELS[$lockedStatus] ?? $lockedStatus;
+                    $lockedIcon   = ['viewed'=>'fa-eye','approved'=>'fa-check-circle','interviewing'=>'fa-calendar-check','rejected'=>'fa-times-circle'][$lockedStatus] ?? 'fa-lock';
+                    $lockedColor  = ['viewed'=>'#0369a1','approved'=>'#4338ca','interviewing'=>'#15803d','rejected'=>'#dc2626'][$lockedStatus] ?? '#595959';
+                    $lockedBg     = ['viewed'=>'#f0f9ff','approved'=>'#f0f0ff','interviewing'=>'#f0fdf4','rejected'=>'#fff1f2'][$lockedStatus] ?? '#f5f5f5';
+                    $lockedBorder = ['viewed'=>'#7dd3fc','approved'=>'#a5b4fc','interviewing'=>'#86efac','rejected'=>'#fca5a5'][$lockedStatus] ?? '#d9d9d9';
+                  @endphp
+                  <div style="background:{{ $lockedBg }};border:1.5px solid {{ $lockedBorder }};border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+                    <i class="fas {{ $lockedIcon }}" style="color:{{ $lockedColor }};font-size:18px;flex-shrink:0"></i>
+                    <div>
+                      <div class="fw-600 fs-13" style="color:{{ $lockedColor }}">Hồ sơ đang ở trạng thái: {{ $lockedLabel }}</div>
+                      <div class="fs-12" style="color:var(--text-secondary);margin-top:2px">Không thể ứng tuyển lại khi hồ sơ đã được nhà tuyển dụng xử lý.</div>
+                    </div>
+                  </div>
+                  <button class="btn btn-lg" disabled style="background:var(--border);color:var(--text-disabled);cursor:not-allowed;opacity:.6">
+                    <i class="fas fa-lock fa-fw"></i> Ứng tuyển lại
+                  </button>
+                @elseif($reapplyDisabled)
+                  {{-- Đã ứng tuyển đủ 3 lần: disable nút --}}
+                  <div style="background:#F5F5F5;border:1.5px solid #D9D9D9;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+                    <i class="fas fa-ban" style="color:#8c8c8c;font-size:18px;flex-shrink:0"></i>
+                    <div>
+                      <div class="fw-600 fs-13" style="color:#595959">Đã ứng tuyển tối đa {{ \App\Models\Application::MAX_APPLY_ROUNDS }} lần</div>
+                      <div class="fs-12" style="color:#8c8c8c;margin-top:2px">Bạn đã dùng hết số lượt ứng tuyển cho vị trí này.</div>
+                    </div>
+                  </div>
+                  <button class="btn btn-lg" disabled style="background:var(--border);color:var(--text-disabled);cursor:not-allowed;opacity:.7">
+                    <i class="fas fa-redo fa-fw"></i> Ứng tuyển lại
+                  </button>
                 @elseif($existingApplication)
                   <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-outline btn-lg">
                     <i class="fas fa-redo fa-fw"></i> Ứng tuyển lại
+                    @if($applyCount > 0)
+                      <span style="font-size:11px;font-weight:600;background:var(--primary);color:#fff;border-radius:20px;padding:1px 7px;margin-left:4px">{{ $applyCount }}/{{ \App\Models\Application::MAX_APPLY_ROUNDS }}</span>
+                    @endif
                   </a>
                 @else
                   <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-primary btn-lg">

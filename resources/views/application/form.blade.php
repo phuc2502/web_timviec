@@ -4,9 +4,13 @@
 
 @section('content')
 @php
-  $tokenRecord = \App\Models\UserToken::where('user_id', auth()->id())->first();
-  $balance     = $tokenRecord?->balance ?? 0;
-  $isReapply   = isset($existingApp) && $existingApp !== null;
+  $tokenRecord    = \App\Models\UserToken::where('user_id', auth()->id())->first();
+  $balance        = $tokenRecord?->balance ?? 0;
+  $isReapply      = isset($existingApp) && $existingApp !== null;
+  $applyCount     = $applyCount     ?? 0;
+  $maxRounds      = $maxRounds      ?? \App\Models\Application::MAX_APPLY_ROUNDS;
+  $isStatusLocked = $isStatusLocked ?? false;
+  $submitDisabled = $balance <= 0 || $isStatusLocked;
 @endphp
 
 <style>
@@ -79,13 +83,46 @@
   </div>
 
   {{-- Reapply notice --}}
-  @if($isReapply)
-  <div style="background:#f0f9ff;border:1.5px solid #38bdf8;border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">
-    <i class="fas fa-info-circle" style="color:#0284c7;font-size:16px;flex-shrink:0"></i>
-    <div class="fs-13" style="color:#0c4a6e">
-      <strong>Bạn đã nộp đơn trước đó.</strong> Cập nhật thông tin bên dưới để gửi lại hồ sơ mới nhất — NTD sẽ thấy phiên bản này.
+  {{-- Banner khoá: hồ sơ đã được NTD xử lý --}}
+  @if($isStatusLocked)
+  @php
+    $lockedLabel = \App\Models\Application::STATUS_LABELS[$existingApp->status] ?? $existingApp->status;
+  @endphp
+  <div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px">
+    <i class="fas fa-lock" style="color:#dc2626;font-size:18px;flex-shrink:0"></i>
+    <div class="fs-13" style="color:#7f1d1d">
+      <strong>Không thể ứng tuyển lại.</strong>
+      Hồ sơ của bạn đang ở trạng thái <strong>{{ $lockedLabel }}</strong> — nhà tuyển dụng đã xử lý đơn này.
+      Bạn có thể <a href="{{ route('candidate.history') }}" style="color:#dc2626;font-weight:600">xem lịch sử ứng tuyển</a> để biết thêm.
     </div>
   </div>
+  @endif
+
+  @if($isReapply)
+  @php
+    $isSubmittedStatus = $existingApp && $existingApp->status === 'submitted';
+    // Lần ứng tuyển tiếp theo: nếu status=submitted thì vẫn là round cũ (update), ngược lại +1
+    $nextRound = $isSubmittedStatus ? $applyCount : $applyCount + 1;
+  @endphp
+  @if($isSubmittedStatus)
+    {{-- Status = submitted: sẽ UPDATE bản ghi cũ --}}
+    <div style="background:#f0f9ff;border:1.5px solid #38bdf8;border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">
+      <i class="fas fa-sync-alt" style="color:#0284c7;font-size:16px;flex-shrink:0"></i>
+      <div class="fs-13" style="color:#0c4a6e">
+        <strong>Cập nhật hồ sơ lần {{ $applyCount }}/{{ $maxRounds }}.</strong>
+        Đơn của bạn đang ở trạng thái <strong>Đã nộp</strong> — thông tin bên dưới sẽ được cập nhật trực tiếp lên bản ghi hiện có, NTD sẽ thấy phiên bản mới nhất.
+      </div>
+    </div>
+  @else
+    {{-- Status khác submitted: sẽ TẠO BẢN GHI MỚI --}}
+    <div style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">
+      <i class="fas fa-plus-circle" style="color:#ea580c;font-size:16px;flex-shrink:0"></i>
+      <div class="fs-13" style="color:#7c2d12">
+        <strong>Ứng tuyển lại — lần {{ $nextRound }}/{{ $maxRounds }}.</strong>
+        Hồ sơ hiện tại của bạn đã được xử lý. Nộp đơn mới sẽ tạo thêm 1 bản ghi — NTD sẽ thấy cả hai trong danh sách ứng viên.
+      </div>
+    </div>
+  @endif
   @endif
 
   {{-- Token bar --}}

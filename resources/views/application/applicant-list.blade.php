@@ -64,7 +64,6 @@
               <th style="padding:12px 20px;text-align:left;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px">File CV</th>
               <th style="padding:12px 20px;text-align:left;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px">Ngày nộp</th>
               <th style="padding:12px 20px;text-align:left;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px">Trạng thái</th>
-              <th style="padding:12px 20px;text-align:center;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px">Shortlist</th>
               <th style="padding:12px 20px;text-align:center;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px">Hành động</th>
             </tr>
           </thead>
@@ -82,8 +81,16 @@
               @endphp
               <tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--bg-gray)'" onmouseout="this.style.background=''">
                 <td style="padding:14px 20px">
-                  <div class="fw-600" style="color:var(--text-dark)">{{ $app->user->name }}</div>
-                  <div class="fs-12 text-muted">{{ $app->user->email }}</div>
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span class="fw-600" style="color:var(--text-dark)">{{ $app->user->name }}</span>
+                    {{-- Badge lần ứng tuyển: chỉ hiện khi > lần 1 --}}
+                    @if($app->apply_round > 1)
+                      <span style="font-size:10px;font-weight:700;background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:20px;padding:1px 7px;white-space:nowrap">
+                        Lần {{ $app->apply_round }}
+                      </span>
+                    @endif
+                  </div>
+                  <div class="fs-12 text-muted mt-2">{{ $app->user->email }}</div>
                 </td>
                 <td style="padding:14px 20px;font-size:13px;color:var(--text-secondary)">
                   <i class="fas fa-paperclip fa-fw"></i> {{ $app->cv->original_name ?? '—' }}
@@ -95,15 +102,6 @@
                   <span class="badge {{ $s['class'] ?? '' }}" style="{{ $s['style'] ?? '' }}">
                     {{ $s['label'] }}
                   </span>
-                </td>
-                <td style="padding:14px 20px;text-align:center">
-                  @php $isShortlisted = $app->listing->users()->where('user_id',$app->user_id)->first()?->pivot?->shortlisted ?? false; @endphp
-                  <form action="{{ route('employer.shortlist.toggle', [$listingId, $app->user_id]) }}" method="POST" style="display:inline">
-                    @csrf
-                    <button type="submit" class="btn btn-sm {{ $isShortlisted ? 'btn-secondary' : 'btn-outline' }}" title="{{ $isShortlisted ? 'Bỏ shortlist' : 'Shortlist' }}">
-                      <i class="fas {{ $isShortlisted ? 'fa-star' : 'fa-star' }}" style="color:{{ $isShortlisted ? '#f59e0b' : '#9ca3af' }}"></i>
-                    </button>
-                  </form>
                 </td>
                 <td style="padding:14px 20px;text-align:center">
                   <a href="{{ route('employer.application.detail', $app->id) }}" class="btn btn-primary btn-sm">

@@ -43,6 +43,12 @@
       </div>
       <div class="fs-12 text-muted">
         Nộp ngày {{ $application->applied_at->format('d/m/Y H:i') }}
+        @if(($application->apply_round ?? 1) > 1)
+          &nbsp;·&nbsp;
+          <span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700">
+            Lần ứng tuyển thứ {{ $application->apply_round }}/{{ \App\Models\Application::MAX_APPLY_ROUNDS }}
+          </span>
+        @endif
       </div>
     </div>
   </div>

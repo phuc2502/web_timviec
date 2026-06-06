@@ -4,7 +4,7 @@
 @section('content')
 <div class="flex-between mb-20">
   <div>
-    <h1 class="fs-20 fw-800" style="color:var(--text-dark)">Hồ sơ CV của tôi</h1>
+    <h1 class="fs-20 fw-800" style="color:var(--secondary)">Hồ sơ CV của tôi</h1>
     <p class="text-muted fs-13 mt-4">Quản lý CV đã tải lên hoặc tự tay tạo CV online chuyên nghiệp chỉ trong vài phút.</p>
   </div>
 </div>
@@ -72,7 +72,7 @@
           <i class="fas fa-magic"></i>
         </div>
         <h3 class="fw-700 fs-16 mb-8 text-center">Tạo CV Online</h3>
-        <p class="text-muted fs-13 mb-16 text-center">Hệ thống tạo CV chuyên nghiệp tự động, hỗ trợ tải PDF chuẩn tiếng Việt.</p>
+        <p class="text-muted fs-13 mb-16 text-center font-size: 13px">Hệ thống tạo CV chuyên nghiệp tự động, hỗ trợ tải PDF chuẩn tiếng Việt.</p>
 
         @if($cvData)
           <div class="alert alert-info mb-16" style="font-size: 12px; text-align: left; background: #e8f4fd; color: #1a73e8; border: 1px solid #1a73e8; padding: 12px; border-radius: var(--radius)">

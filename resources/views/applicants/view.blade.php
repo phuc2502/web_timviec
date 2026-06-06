@@ -65,7 +65,7 @@
                   <i class="fas fa-file-pdf"></i> Xem CV
                 </a>
               @endif
-              <form action="{{ route('employer.shortlist.toggle', [$listing->id, $applicant->id]) }}" method="POST">
+              <form action="{{ url('/shortlist/'.$listing->id.'/'.$applicant->id) }}" method="POST">
                 @csrf
                 <button type="submit" class="btn btn-sm {{ $applicant->pivot->shortlisted ? 'btn-secondary' : 'btn-primary' }}">
                   <i class="fas {{ $applicant->pivot->shortlisted ? 'fa-times' : 'fa-star' }}"></i>

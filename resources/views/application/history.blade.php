@@ -65,6 +65,9 @@
               <div style="flex:1;min-width:0">
                 <div class="fw-700" style="color:var(--secondary);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                   {{ $app->listing->title ?? 'Công việc đã xóa' }}
+                  @if(($app->apply_round ?? 1) > 1)
+                    <span style="font-size:10px;font-weight:700;background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap">Lần {{ $app->apply_round }}</span>
+                  @endif
                 </div>
                 <div class="fs-13 text-muted mt-8">
                   <i class="fas fa-building fa-fw"></i>
