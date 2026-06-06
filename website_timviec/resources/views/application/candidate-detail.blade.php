@@ -43,6 +43,12 @@
       </div>
       <div class="fs-12 text-muted">
         Nộp ngày {{ $application->applied_at->format('d/m/Y H:i') }}
+        @if(($application->apply_round ?? 1) > 1)
+          &nbsp;·&nbsp;
+          <span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700">
+            Lần ứng tuyển thứ {{ $application->apply_round }}/{{ \App\Models\Application::MAX_APPLY_ROUNDS }}
+          </span>
+        @endif
       </div>
     </div>
   </div>
@@ -78,6 +84,25 @@
         </div>
       </div>
     </div>
+
+    {{-- Thông tin liên hệ đã nộp --}}
+    @if($application->applicant_name || $application->applicant_phone)
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <span class="fw-700">📋 Thông tin đã gửi đến nhà tuyển dụng</span>
+        <span style="font-size:11px;color:var(--text-secondary)">Cập nhật {{ $application->applied_at->format('d/m/Y') }}</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+          <div><div class="text-muted fs-12 mb-6">Họ tên đã nộp</div><div class="fw-600">{{ $application->applicant_name ?: auth()->user()->name }}</div></div>
+          <div><div class="text-muted fs-12 mb-6">Email đã nộp</div><div>{{ $application->applicant_email ?: auth()->user()->email }}</div></div>
+          @if($application->applicant_phone)
+          <div><div class="text-muted fs-12 mb-6">Số điện thoại</div><div>{{ $application->applicant_phone }}</div></div>
+          @endif
+        </div>
+      </div>
+    </div>
+    @endif
 
     {{-- CV đã nộp --}}
     @if($application->cv)

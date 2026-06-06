@@ -91,9 +91,9 @@
 
             <div class="form-group">
               <label class="form-label">Hạn nộp hồ sơ <span class="required">*</span></label>
-              <input type="date" name="date" class="form-control {{ $errors->has('date') ? 'is-invalid' : '' }}"
-                value="{{ old('date') }}" min="{{ date('Y-m-d') }}" required>
-              @error('date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+              <input type="date" name="application_close_date" class="form-control {{ $errors->has('application_close_date') ? 'is-invalid' : '' }}"
+                value="{{ old('application_close_date') }}" min="{{ date('Y-m-d', strtotime('+1 day')) }}" required>
+              @error('application_close_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
             <div class="form-group">

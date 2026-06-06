@@ -19,9 +19,12 @@
     $balance = $tokenRecord?->balance ?? 0;
   @endphp
 
-  <div class="alert alert-info mb-24" style="display:inline-flex;align-items:center;gap:8px">
-    <i class="fas fa-ticket-alt fa-fw"></i>
-    Lượt ứng tuyển hiện tại của bạn: <strong style="margin-left:4px">{{ $balance }} lượt</strong>
+  <div style="display:inline-flex;align-items:center;gap:10px;background:#e0f2fe;border:1.5px solid #38bdf8;border-radius:10px;padding:12px 20px;margin-bottom:24px">
+    <i class="fas fa-ticket-alt fa-fw" style="color:#0284c7;font-size:16px"></i>
+    <span style="font-size:14px;color:#0c4a6e">
+      Lượt ứng tuyển hiện tại của bạn:
+      <strong style="color:#0369a1;margin-left:4px">{{ $balance }} lượt</strong>
+    </span>
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
