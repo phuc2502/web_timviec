@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // Alias mới cho phân quyền đúng role
             'candidate' => \App\Http\Middleware\EnsureCandidate::class,
             'employer'  => \App\Http\Middleware\EnsureEmployer::class,
+            'admin'     => \App\Http\Middleware\EnsureAdmin::class,
         ]);
 
         // Loại trừ VNPay IPN khỏi CSRF verification (server-to-server callback)
