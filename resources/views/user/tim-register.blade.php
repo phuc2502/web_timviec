@@ -19,7 +19,7 @@
           </div>
         @endif
 
-        <form action="{{ url('/register/employee') }}" method="POST">
+        <form action="{{ url('/register/tim') }}" method="POST">
           @csrf
           <input type="hidden" name="user_type" value="employee">
           <div class="flex-col gap-16">
