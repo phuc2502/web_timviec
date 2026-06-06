@@ -112,7 +112,18 @@ if (textarea) {
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
   });
 }
+// Tự động refresh CSRF token mỗi 10 phút để tránh Page Expired
+setInterval(function() {
+    fetch('/sanctum/csrf-cookie').catch(() => {});
+}, 600000);
 
+// Khi form submit bị lỗi 419, tự reload trang
+document.querySelector('form[action*="send"]')?.addEventListener('submit', function(e) {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (token) {
+        document.querySelectorAll('input[name="_token"]').forEach(el => el.value = token);
+    }
+});
 // Poll new messages
 let lastId = {{ $messages->last()?->id ?? 0 }};
 if (container) {
