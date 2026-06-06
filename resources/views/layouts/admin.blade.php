@@ -25,14 +25,11 @@
       <a href="{{ url('/admin/users') }}" class="{{ request()->is('admin/users*') ? 'active' : '' }}">
         <i class="fas fa-users fa-fw"></i> Người dùng
       </a>
-      <a href="{{ url('/admin/permissions') }}" class="{{ request()->is('admin/permissions*') ? 'active' : '' }}">
-        <i class="fas fa-shield-alt fa-fw"></i> Phân quyền dữ liệu
+      <a href="{{ url('/admin/transactions') }}" class="{{ request()->is('admin/transactions*') ? 'active' : '' }}">
+        <i class="fas fa-credit-card fa-fw"></i> Giao dịch
       </a>
       <a href="{{ url('/admin/jobs') }}" class="{{ request()->is('admin/jobs*') ? 'active' : '' }}">
         <i class="fas fa-briefcase fa-fw"></i> Tin tuyển dụng
-      </a>
-      <a href="{{ url('/admin/transactions') }}" class="{{ request()->is('admin/transactions*') ? 'active' : '' }}">
-        <i class="fas fa-credit-card fa-fw"></i> Giao dịch
       </a>
       <div class="admin-nav__section">Hệ thống</div>
       <a href="{{ url('/') }}" target="_blank">
