@@ -8,7 +8,9 @@ return new class extends Migration {
     {
         Schema::table('applications', function (Blueprint $table) {
             // Thêm cột ngày giờ phỏng vấn (chỉ có khi status = interviewing)
-            $table->timestamp('interview_scheduled_at')->nullable()->after('status_updated_at');
+            if (!Schema::hasColumn('applications', 'interview_scheduled_at')) {
+                $table->timestamp('interview_scheduled_at')->nullable()->after('status_updated_at');
+            }
 
             // Đổi enum để thêm trạng thái 'approved' (Duyệt hồ sơ)
             // MySQL: cần dùng raw SQL để modify enum
