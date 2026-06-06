@@ -12,19 +12,6 @@ use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
-    /**
-     * Bảo vệ: Chỉ Admin mới được truy cập.
-     */
-    public function __construct()
-    {
-        $this->middleware(function ($request, $next) {
-            if (auth()->user()->user_type !== 'admin') {
-                abort(403, 'Bạn không có quyền truy cập khu vực quản trị.');
-            }
-            return $next($request);
-        });
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // USERS
     // ─────────────────────────────────────────────────────────────────────────
@@ -34,7 +21,7 @@ class AdminController extends Controller
      */
     public function users(Request $request)
     {
-        $query = User::query()->where('id', '!=', auth()->id());
+        $query = User::query()->where('user_type', '!=', 'admin');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -48,7 +35,15 @@ class AdminController extends Controller
             $query->where('user_type', $request->type);
         }
 
-        $users = $query->latest()->paginate(10)->withQueryString();
+        if ($request->filled('status')) {
+            if ($request->status === 'banned') {
+                $query->where('is_banned', true);
+            } elseif ($request->status === 'active') {
+                $query->where('is_banned', false);
+            }
+        }
+
+        $users = $query->latest()->paginate(15)->withQueryString();
 
         return view('admin.users', compact('users'));
     }
@@ -65,6 +60,8 @@ class AdminController extends Controller
         $user    = User::findOrFail($id);
         $oldRole = $user->user_type;
         $user->user_type = $request->user_type;
+        // Đồng bộ is_admin
+        $user->is_admin  = ($request->user_type === 'admin') ? 1 : 0;
         $user->save();
 
         Log::info("Admin updated role of user {$user->id} from {$oldRole} to {$user->user_type}");
@@ -116,6 +113,25 @@ class AdminController extends Controller
         return back()->with('success', "Đã {$status} tài khoản của {$user->name} thành công.");
     }
 
+    /**
+     * DELETE /admin/users/{id} — Xóa tài khoản user
+     */
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->user_type === 'admin' || $user->is_admin) {
+            return back()->with('error', 'Không thể xóa tài khoản Admin.');
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        Log::info("Admin deleted user ID {$id} ({$name})");
+
+        return back()->with('success', "Đã xóa tài khoản của {$name} khỏi hệ thống.");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // USER DETAIL (JSON — cho modal)
     // ─────────────────────────────────────────────────────────────────────────
@@ -158,54 +174,72 @@ class AdminController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // PERMISSIONS (Data Authorization)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * GET /admin/permissions — Quản lý phân quyền sở hữu dữ liệu
-     */
-    public function permissions(Request $request)
-    {
-        $query = Listing::query()->with('user');
-
-        if ($request->filled('search')) {
-            $query->where('title', 'like', "%{$request->search}%");
-        }
-
-        $listings  = $query->latest()->paginate(10)->withQueryString();
-        $employers = User::where('user_type', 'employer')->get();
-
-        return view('admin.permissions', compact('listings', 'employers'));
-    }
-
-    /**
-     * POST /admin/permissions/transfer/{id} — Chuyển giao quyền sở hữu tin tuyển dụng
-     */
-    public function transferOwnership(Request $request, $id)
-    {
-        $request->validate([
-            'new_owner_id' => 'required|exists:users,id',
-        ]);
-
-        $listing  = Listing::findOrFail($id);
-        $newOwner = User::findOrFail($request->new_owner_id);
-
-        if ($newOwner->user_type !== 'employer') {
-            return back()->with('error', 'Chỉ có thể chuyển giao sở hữu tin tuyển dụng cho người dùng loại Nhà tuyển dụng.');
-        }
-
-        $oldOwnerName     = $listing->user->name;
-        $listing->user_id = $newOwner->id;
-        $listing->save();
-
-        Log::info("Data Ownership Transfer: Job listing '{$listing->title}' (ID: {$listing->id}) transferred from {$oldOwnerName} to {$newOwner->name}");
-
-        return back()->with('success', "Chuyển giao quyền sở hữu tin \"{$listing->title}\" từ [{$oldOwnerName}] sang [{$newOwner->name}] thành công!");
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // JOBS
     // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /admin/jobs/pending — Danh sách tin chờ duyệt
+     */
+    public function pendingJobs(Request $request)
+    {
+        $query = Listing::query()
+            ->with(['user'])
+            ->where('status', 'pending')
+            ->orWhereNull('status');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search) {
+                      $uq->where('company_name', 'like', "%{$search}%")
+                         ->orWhere('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('job_type')) {
+            $query->where('job_type', $request->job_type);
+        }
+
+        $listings = $query->latest()->paginate(10)->withQueryString();
+        $pendingCount = Listing::where('status', 'pending')->orWhereNull('status')->count();
+
+        return view('admin.pending-jobs', compact('listings', 'pendingCount'));
+    }
+
+    /**
+     * POST /admin/jobs/{id}/approve — Duyệt tin tuyển dụng
+     */
+    public function approveJob(Request $request, $id)
+    {
+        $listing = Listing::findOrFail($id);
+        $listing->status = 'open';
+        $listing->save();
+
+        Log::info("Admin approved listing ID {$id}: {$listing->title}");
+
+        return back()->with('success', "✅ Đã duyệt tin \"{$listing->title}\" thành công. Tin đang hiển thị trên hệ thống.");
+    }
+
+    /**
+     * POST /admin/jobs/{id}/reject — Từ chối tin tuyển dụng
+     */
+    public function rejectJob(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $listing = Listing::findOrFail($id);
+        $listing->status = 'hidden';
+        $listing->save();
+
+        Log::info("Admin rejected listing ID {$id}: {$listing->title}. Reason: " . ($request->reason ?? 'Không có lý do'));
+
+        return back()->with('success', "❌ Đã từ chối tin \"{$listing->title}\". Tin bị ẩn khỏi hệ thống.");
+    }
 
     /**
      * GET /admin/jobs
@@ -257,7 +291,7 @@ class AdminController extends Controller
             'job_type'               => $job->job_type,
             'address'                => $job->address,
             'salary'                 => $job->salary,
-            'status'                 => $job->status,
+            'status'                 => $job->status ?? 'open',
             'feature_image'          => $job->feature_image,
             'application_close_date' => $job->application_close_date
                                             ? $job->application_close_date->format('d/m/Y')
@@ -287,6 +321,24 @@ class AdminController extends Controller
         return back()->with('success', "Đã xóa tin tuyển dụng \"{$title}\" khỏi hệ thống.");
     }
 
+    /**
+     * POST /admin/jobs/{id}/status — Toggle trạng thái tin tuyển dụng
+     */
+    public function toggleJobStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,open,hidden,closed',
+        ]);
+
+        $listing = Listing::findOrFail($id);
+        $listing->status = $request->status;
+        $listing->save();
+
+        Log::info("Admin changed status of listing ID {$id} to {$request->status}");
+
+        return back()->with('success', "Đã cập nhật trạng thái tin \"{$listing->title}\" sang " . strtoupper($request->status) . ".");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // TRANSACTIONS
     // ─────────────────────────────────────────────────────────────────────────
@@ -301,8 +353,8 @@ class AdminController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('vnp_txn_ref', 'like', "%{$search}%")
-                  ->orWhere('vnp_transaction_no', 'like', "%{$search}%")
+                $q->where('vnpay_txn_ref', 'like', "%{$search}%")
+                  ->orWhere('vnpay_response', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
                       $uq->where('email', 'like', "%{$search}%")
                          ->orWhere('name', 'like', "%{$search}%");
@@ -311,7 +363,12 @@ class AdminController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $status = $request->status;
+            if ($status === 'paid') {
+                $query->where('status', 'success');
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         if ($request->filled('plan')) {

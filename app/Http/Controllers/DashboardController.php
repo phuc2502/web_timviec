@@ -2,86 +2,123 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Listing;
+use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    /**
-     * Chuyển hướng và hiển thị Dashboard động dựa theo vai trò của người dùng.
-     */
     public function index()
     {
         $user = auth()->user();
 
-        // Tự động ánh xạ Mock User từ FakeAuth sang tài khoản CSDL tương ứng để hiển thị dữ liệu thật phong phú khi test
-        if ($user && ($user->email === 'user@example.com' || $user->email === 'hr@abctech.vn' || $user->id == 1)) {
-            $realUser = User::where('user_type', $user->user_type)->first();
-            if ($realUser) {
-                $user = $realUser;
-            }
-        }
+        // ═══════════════════════════════════════════════
+        // ADMIN DASHBOARD
+        // ═══════════════════════════════════════════════
+        if ($user->user_type === 'admin' || $user->is_admin) {
 
-        if ($user->user_type === 'admin') {
-            // Thống kê toàn hệ thống dành cho Admin
             $totalUsers        = User::count();
             $totalJobs         = Listing::count();
             $totalApplications = DB::table('listing_user')->count();
-            $totalRevenue      = User::where('plan', 'premium')->count() * 490000; // Doanh thu giả lập từ tài khoản Premium (490K/acc)
-            
-            $totalEmployees    = User::where('user_type', 'employee')->count();
-            $totalEmployers    = User::where('user_type', 'employer')->count();
-            
-            $recentUsers       = User::latest()->take(5)->get();
-            $recentJobs        = Listing::with('user', 'users')->latest()->take(4)->get();
+
+            // ── Doanh thu: tính từ bảng payments (giao dịch VNPay thành công) ──
+            $totalRevenue = DB::table('payments')
+                ->where('status', 'success')
+                ->sum('amount');
+
+            // ── Phân loại user ──────────────────────────────────────────────
+            $totalEmployees = User::where('user_type', 'employee')->count();
+            $totalEmployers = User::where('user_type', 'employer')->count();
+
+            // ── Trạng thái tài khoản ────────────────────────────────────────
+            $activeUsers = User::where('is_banned', false)->count();
+            $bannedUsers = User::where('is_banned', true)->count();
+
+            // ── Gói dịch vụ (plan enum: free | trial | premium) ─────────────
+            $premiumUsers = User::where('plan', 'premium')->count();
+            $trialUsers   = User::where('plan', 'trial')->count();
+
+            // ── Thống kê đơn ứng tuyển ──────────────────────────────────────
+            $totalApplicationsCount = DB::table('applications')->count();
+
+            // ── Giao dịch mới nhất (5 giao dịch) ────────────────────────────
+            $recentTransactions = DB::table('payments')
+                ->join('users', 'users.id', '=', 'payments.user_id')
+                ->select(
+                    'payments.id',
+                    'payments.amount',
+                    'payments.status',
+                    'payments.plan',
+                    'payments.created_at',
+                    'users.name as user_name',
+                    'users.email as user_email'
+                )
+                ->orderByDesc('payments.created_at')
+                ->limit(5)
+                ->get();
+
+            // ── Danh sách user mới nhất (5 người) ──────────────────────────
+            $recentUsers = User::latest()->take(5)->get();
+
+            // ── Tin tuyển dụng theo trạng thái ──────────────────────────────
+            $openJobs   = Listing::where('status', 'open')->count();
+            $hiddenJobs = Listing::where('status', 'hidden')->count();
+            $closedJobs = Listing::where('status', 'closed')->count();
 
             return view('admin.index', compact(
                 'totalUsers', 'totalJobs', 'totalApplications', 'totalRevenue',
-                'totalEmployees', 'totalEmployers', 'recentUsers', 'recentJobs'
+                'totalEmployees', 'totalEmployers', 'recentUsers',
+                'activeUsers', 'bannedUsers', 'premiumUsers', 'trialUsers',
+                'totalApplicationsCount', 'recentTransactions',
+                'openJobs', 'hiddenJobs', 'closedJobs'
             ));
         }
 
+        // ═══════════════════════════════════════════════
+        // EMPLOYER DASHBOARD
+        // ═══════════════════════════════════════════════
         if ($user->user_type === 'employer') {
-            // Thống kê tuyển dụng của riêng Employer
-            $totalJobs        = Listing::where('user_id', $user->id)->count();
-            
-            $totalApplicants  = DB::table('listing_user')
+
+            $totalJobs = Listing::where('user_id', $user->id)->count();
+
+            $totalApplicants = DB::table('listing_user')
                 ->join('listings', 'listings.id', '=', 'listing_user.listing_id')
                 ->where('listings.user_id', $user->id)
                 ->count();
-                
-            $shortlisted      = DB::table('listing_user')
+
+            $shortlisted = DB::table('listing_user')
                 ->join('listings', 'listings.id', '=', 'listing_user.listing_id')
                 ->where('listings.user_id', $user->id)
                 ->where('listing_user.shortlisted', true)
                 ->count();
-                
-            $activeJobs       = Listing::where('user_id', $user->id)
-                ->where(function($query) {
-                    $query->where('application_close_date', '>=', now())
-                          ->orWhereNull('application_close_date');
-                })
-                ->count();
 
-            $recentJobs       = Listing::with('users')
+            $activeJobs = Listing::where('user_id', $user->id)
+                ->where(function ($q) {
+                    $q->where('application_close_date', '>=', now())
+                      ->orWhereNull('application_close_date');
+                })->count();
+
+            $recentJobs = Listing::with('users')
                 ->where('user_id', $user->id)
                 ->latest()
                 ->take(4)
                 ->get();
 
-            return view('dashboard', compact(
+            return view('dashboard.employer', compact(
                 'totalJobs', 'totalApplicants', 'shortlisted', 'activeJobs', 'recentJobs'
             ));
         }
 
-        // Dashboard dành cho Ứng viên (Employee)
+        // ═══════════════════════════════════════════════
+        // EMPLOYEE DASHBOARD
+        // ═══════════════════════════════════════════════
         $appliedJobs = $user->appliedListings()
             ->latest('listing_user.created_at')
             ->take(5)
             ->get();
 
-        return view('dashboard', compact('appliedJobs'));
+        return view('dashboard.employee', compact('appliedJobs'));
     }
 }

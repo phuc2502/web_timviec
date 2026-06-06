@@ -16,6 +16,7 @@ class JobController extends Controller
     public function index(Request $request)
     {
         $query = Listing::with('user')
+            ->where('status', 'open')
             ->where(function ($q) {
                 $q->whereNull('application_close_date')
                   ->orWhere('application_close_date', '>=', now());
@@ -78,6 +79,7 @@ class JobController extends Controller
         // Kiểm tra ứng viên đã nộp đơn chưa
         $existingApplication = null;
         $applyCount          = 0;
+        $isStatusLocked      = false;
         if (auth()->check() && auth()->user()->user_type === 'employee') {
             $allApps = \App\Models\Application::where('user_id', auth()->id())
                 ->where('listing_id', $listing->id)
@@ -154,6 +156,7 @@ class JobController extends Controller
                 'salary'                => $request->salary ?? 0,
                 'address'               => $request->address,
                 'job_type'              => $request->job_type,
+                'status'                => 'pending',
                 'application_close_date'=> $request->application_close_date,
             ]);
 

@@ -46,4 +46,22 @@ class Listing extends Model
         }
         return $this->applications()->count() >= 3;
     }
+
+    // ─── Status Helpers ───────────────────────────────────────────────────
+
+    public function isPending(): bool { return ($this->status ?? 'pending') === 'pending'; }
+    public function isOpen(): bool    { return $this->status === 'open'; }
+    public function isHidden(): bool  { return $this->status === 'hidden'; }
+    public function isClosed(): bool  { return $this->status === 'closed'; }
+
+    public function statusLabel(): string
+    {
+        return match($this->status ?? 'pending') {
+            'pending' => 'Chờ duyệt',
+            'open'    => 'Đang mở',
+            'hidden'  => 'Tạm ẩn',
+            'closed'  => 'Đã đóng',
+            default   => 'Không xác định',
+        };
+    }
 }
