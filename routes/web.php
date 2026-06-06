@@ -180,10 +180,10 @@ Route::middleware(['auth', 'employer'])->group(function () {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ADMIN — yêu cầu đăng nhập (AdminController tự kiểm tra user_type === 'admin')
+// ADMIN — yêu cầu đăng nhập và phân quyền admin
 // ═══════════════════════════════════════════════════════════════════════════
 
-Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/',                              [DashboardController::class, 'index'])->name('dashboard');
 
     // Users
@@ -193,14 +193,14 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('/users/{id}/plan',              [AdminController::class, 'updatePlan'])->name('users.plan');
     Route::post('/users/{id}/ban',               [AdminController::class, 'toggleBan'])->name('users.ban');
 
-    // Permissions
-    Route::get('/permissions',                   [AdminController::class, 'permissions'])->name('permissions');
-    Route::post('/permissions/transfer/{id}',    [AdminController::class, 'transferOwnership'])->name('permissions.transfer');
-
     // Jobs
     Route::get('/jobs',                          [AdminController::class, 'jobs'])->name('jobs');
+    Route::get('/jobs/pending',                  [AdminController::class, 'pendingJobs'])->name('jobs.pending');
     Route::get('/jobs/{id}/detail',              [AdminController::class, 'jobDetail'])->name('jobs.detail');
     Route::delete('/jobs/{id}',                  [AdminController::class, 'deleteJob'])->name('jobs.delete');
+    Route::post('/jobs/{id}/status',             [AdminController::class, 'toggleJobStatus'])->name('jobs.status');
+    Route::post('/jobs/{id}/approve',            [AdminController::class, 'approveJob'])->name('jobs.approve');
+    Route::post('/jobs/{id}/reject',             [AdminController::class, 'rejectJob'])->name('jobs.reject');
 
     // Transactions
     Route::get('/transactions',                  [AdminController::class, 'transactions'])->name('transactions');
