@@ -7,16 +7,12 @@ use App\Models\Application;
 use App\Http\Requests\UpdateApplicationStatusRequest;
 use App\Models\Listing;
 use App\Services\ApplicationService;
-use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ApplicationController extends Controller
 {
-    public function __construct(
-        private readonly ApplicationService $service,
-        private readonly NotificationService $notif,
-    ) {}
+    public function __construct(private readonly ApplicationService $service) {}
 
     // ════════════════════════════════════════════════════════════════════════
     // PHÍA ỨNG VIÊN
@@ -30,13 +26,21 @@ class ApplicationController extends Controller
         $listing   = Listing::findOrFail($listingId);
         $candidate = auth()->user();
 
-        // Đơn ứng tuyển hiện tại của job này (nếu re-apply)
-        $existingApp = \App\Models\Application::with('cv')
+        // Tất cả lần ứng tuyển của ứng viên cho job này (theo thứ tự round)
+        $allApps = \App\Models\Application::with('cv')
             ->where('user_id', $candidate->id)
             ->where('listing_id', $listingId)
-            ->first();
+            ->orderBy('id')
+            ->get();
 
-        // suggestedCv: ưu tiên CV của đơn job này (re-apply), sau đó CV gần nhất toàn hệ thống
+        // Bản ghi lần ứng tuyển gần nhất (dùng cho autofill & isReapply)
+        $existingApp = $allApps->last(); // NULL nếu chưa ứng tuyển lần nào
+        // apply_round = tổng số lần đã bấm nộp (kể cả các lần update)
+        $applyCount  = $existingApp ? ($existingApp->apply_round ?? 1) : 0;
+        // Hồ sơ bị khoá: status ≠ submitted → không cho ứng tuyển lại
+        $isStatusLocked = $existingApp && $existingApp->status !== 'submitted';
+
+        // suggestedCv: ưu tiên CV của lần ứng tuyển gần nhất job này
         if ($existingApp && $existingApp->cv) {
             $suggestedCv = $existingApp->cv;
         } else {
@@ -57,11 +61,14 @@ class ApplicationController extends Controller
         ];
 
         return view('application.form', [
-            'listing'     => $listing,
-            'listingId'   => $listingId,
-            'suggestedCv' => $suggestedCv,
-            'autofill'    => $autofill,
-            'existingApp' => $existingApp,
+            'listing'        => $listing,
+            'listingId'      => $listingId,
+            'suggestedCv'    => $suggestedCv,
+            'autofill'       => $autofill,
+            'existingApp'    => $existingApp,
+            'applyCount'     => $applyCount,
+            'maxRounds'      => \App\Models\Application::MAX_APPLY_ROUNDS,
+            'isStatusLocked' => $isStatusLocked,
         ]);
     }
 
@@ -80,9 +87,18 @@ class ApplicationController extends Controller
                 ->with('success', 'Ứng tuyển thành công!');
 
         } catch (\RuntimeException $e) {
-            // Giới hạn free account: hiển thị thông báo riêng
+            // Giới hạn free account
             if (str_starts_with($e->getMessage(), '__FREE_LIMIT__:')) {
                 return back()->with('error', 'Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm. Vui lòng tìm việc khác.');
+            }
+            // Hồ sơ đã được NTD xử lý, không cho ứng tuyển lại
+            if (str_starts_with($e->getMessage(), '__STATUS_LOCKED__:')) {
+                $msg = str_replace('__STATUS_LOCKED__:', '', $e->getMessage());
+                return back()->with('error', trim($msg));
+            }
+            // Vượt quá giới hạn 3 lần ứng tuyển
+            if (str_starts_with($e->getMessage(), '__MAX_REAPPLY__:')) {
+                return back()->with('error', 'Bạn đã ứng tuyển tối đa ' . \App\Models\Application::MAX_APPLY_ROUNDS . ' lần cho vị trí này.');
             }
             return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
@@ -168,50 +184,5 @@ class ApplicationController extends Controller
             Log::error("UpdateStatus failed: " . $e->getMessage());
             return back()->with('error', 'Đã có lỗi xảy ra. Vui lòng thử lại.');
         }
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // SHORTLIST TOGGLE
-    // ════════════════════════════════════════════════════════════════════════
-
-    /**
-     * POST /shortlist/{listingId}/{applicantId}
-     * Toggle shortlist cho ứng viên — employer only.
-     * Gửi in-app notification + email nếu shortlist (không gửi khi bỏ shortlist).
-     */
-    public function toggleShortlist(int $listingId, int $applicantId)
-    {
-        $employer = auth()->user();
-
-        // Kiểm tra listing thuộc về employer này
-        $listing = Listing::where('user_id', $employer->id)->findOrFail($listingId);
-
-        // Pivot record trên bảng listing_user
-        $pivot = $listing->users()->where('user_id', $applicantId)->first();
-
-        if (! $pivot) {
-            return back()->with('error', 'Ứng viên không tồn tại trong danh sách ứng tuyển.');
-        }
-
-        $isCurrentlyShortlisted = (bool) $pivot->pivot->shortlisted;
-        $newValue               = ! $isCurrentlyShortlisted;
-
-        // Cập nhật pivot
-        $listing->users()->updateExistingPivot($applicantId, ['shortlisted' => $newValue]);
-
-        // Gửi thông báo khi shortlist (không gửi khi bỏ shortlist)
-        if ($newValue) {
-            $applicant = \App\Models\User::find($applicantId);
-            if ($applicant) {
-                try {
-                    $this->notif->notifyShortlisted($applicant, $listing->load('user'));
-                } catch (\Exception $e) {
-                    Log::warning("notifyShortlisted failed: " . $e->getMessage());
-                }
-            }
-        }
-
-        $msg = $newValue ? '✅ Đã shortlist ứng viên.' : 'Đã bỏ shortlist ứng viên.';
-        return back()->with('success', $msg);
     }
 }

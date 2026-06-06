@@ -75,18 +75,34 @@ class JobController extends Controller
     {
         $listing = Listing::with(['user', 'users'])->where('slug', $slug)->firstOrFail();
 
-        // Kiểm tra ứng viên đã nộp đơn chưa (dùng bảng applications mới)
+        // Kiểm tra ứng viên đã nộp đơn chưa
         $existingApplication = null;
+        $applyCount          = 0;
         if (auth()->check() && auth()->user()->user_type === 'employee') {
-            $existingApplication = \App\Models\Application::where('user_id', auth()->id())
+            $allApps = \App\Models\Application::where('user_id', auth()->id())
                 ->where('listing_id', $listing->id)
-                ->first();
+                ->orderBy('id')
+                ->get();
+
+            $existingApplication = $allApps->last(); // bản ghi mới nhất (NULL nếu chưa ứng tuyển)
+            // apply_round = tổng số lần đã bấm nộp (kể cả các lần update)
+            $applyCount          = $existingApplication ? ($existingApplication->apply_round ?? 1) : 0;
+            // Hồ sơ bị khoá: NTD đã xử lý (status ≠ submitted) → không cho ứng tuyển lại
+            $isStatusLocked      = $existingApplication && $existingApplication->status !== 'submitted';
         }
 
         // Kiểm tra job của Free account đã nhận đủ 3 ứng viên chưa
         $applicantLimitReached = $listing->applicantLimitReached();
 
-        return view('job.show', compact('listing', 'existingApplication', 'applicantLimitReached'));
+        // Ứng viên đã ứng tuyển đủ 3 lần → disable nút
+        // Disable nút nếu: đủ 3 lần HOẶC hồ sơ đã bị NTD xử lý
+        $reapplyDisabled = ($applyCount >= \App\Models\Application::MAX_APPLY_ROUNDS)
+                        || $isStatusLocked;
+
+        return view('job.show', compact(
+            'listing', 'existingApplication', 'applicantLimitReached',
+            'applyCount', 'reapplyDisabled', 'isStatusLocked'
+        ));
     }
 
     /**

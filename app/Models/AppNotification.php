@@ -27,15 +27,6 @@ class AppNotification extends Model
         return static::where('user_id', $userId)
             ->orderByDesc('created_at')
             ->limit($limit)
-            ->get()
-            ->map(fn($n) => [
-                'id'         => $n->id,
-                'type'       => $n->type,
-                'title'      => $n->title,
-                'body'       => $n->body,
-                'data'       => $n->data,
-                'read_at'    => $n->read_at?->toIso8601String(),
-                'created_at' => $n->created_at->toIso8601String(),
-            ]);
+            ->get();
     }
 }

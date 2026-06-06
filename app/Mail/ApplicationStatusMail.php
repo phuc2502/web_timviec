@@ -26,7 +26,6 @@ class ApplicationStatusMail extends Mailable
 
         $subjects = [
             'interviewing' => "🎯 [{$company}] Thư mời phỏng vấn — {$position}",
-            'accepted'     => "✅ [{$company}] Chúc mừng! Bạn đã được nhận — {$position}",
             'rejected'     => "[{$company}] Thông báo kết quả ứng tuyển — {$position}",
         ];
 
@@ -40,7 +39,6 @@ class ApplicationStatusMail extends Mailable
     {
         $view = match($this->application->status) {
             'interviewing' => 'emails.application-status',
-            'accepted'     => 'emails.application-accepted',
             'rejected'     => 'emails.application-rejected',
             default        => 'emails.application-status',
         };
