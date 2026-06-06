@@ -20,6 +20,28 @@ class JobController extends Controller
                 $q->whereNull('application_close_date')
                   ->orWhere('application_close_date', '>=', now());
             })
+            // Ẩn bài đăng của Free account đã nhận đủ 3 ứng viên:
+            // Điều kiện: employer là Premium  →  hiển thị luôn
+            //            employer là Free     →  chỉ hiển thị khi số đơn < 3
+            ->where(function ($q) {
+                $q->whereHas('user', function ($u) {
+                      // Premium: billing_ends > now() AND status = active
+                      $u->whereHas('subscriptions', function ($s) {
+                          $s->where('status', 'active')
+                            ->where('billing_ends', '>', now());
+                      });
+                  })
+                  ->orWhere(function ($q2) {
+                      // Free: chưa đủ 3 ứng viên
+                      $q2->whereDoesntHave('user', function ($u) {
+                              $u->whereHas('subscriptions', function ($s) {
+                                  $s->where('status', 'active')
+                                    ->where('billing_ends', '>', now());
+                              });
+                          })
+                          ->whereHas('applications', function ($a) {}, '<', 3);
+                  });
+            })
             ->latest();
 
         // Tìm kiếm
@@ -53,15 +75,34 @@ class JobController extends Controller
     {
         $listing = Listing::with(['user', 'users'])->where('slug', $slug)->firstOrFail();
 
-        // Kiểm tra ứng viên đã nộp đơn chưa (dùng bảng applications mới)
+        // Kiểm tra ứng viên đã nộp đơn chưa
         $existingApplication = null;
+        $applyCount          = 0;
         if (auth()->check() && auth()->user()->user_type === 'employee') {
-            $existingApplication = \App\Models\Application::where('user_id', auth()->id())
+            $allApps = \App\Models\Application::where('user_id', auth()->id())
                 ->where('listing_id', $listing->id)
-                ->first();
+                ->orderBy('id')
+                ->get();
+
+            $existingApplication = $allApps->last(); // bản ghi mới nhất (NULL nếu chưa ứng tuyển)
+            // apply_round = tổng số lần đã bấm nộp (kể cả các lần update)
+            $applyCount          = $existingApplication ? ($existingApplication->apply_round ?? 1) : 0;
+            // Hồ sơ bị khoá: NTD đã xử lý (status ≠ submitted) → không cho ứng tuyển lại
+            $isStatusLocked      = $existingApplication && $existingApplication->status !== 'submitted';
         }
 
-        return view('job.show', compact('listing', 'existingApplication'));
+        // Kiểm tra job của Free account đã nhận đủ 3 ứng viên chưa
+        $applicantLimitReached = $listing->applicantLimitReached();
+
+        // Ứng viên đã ứng tuyển đủ 3 lần → disable nút
+        // Disable nút nếu: đủ 3 lần HOẶC hồ sơ đã bị NTD xử lý
+        $reapplyDisabled = ($applyCount >= \App\Models\Application::MAX_APPLY_ROUNDS)
+                        || $isStatusLocked;
+
+        return view('job.show', compact(
+            'listing', 'existingApplication', 'applicantLimitReached',
+            'applyCount', 'reapplyDisabled', 'isStatusLocked'
+        ));
     }
 
     /**

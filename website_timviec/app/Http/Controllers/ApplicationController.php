@@ -23,14 +23,52 @@ class ApplicationController extends Controller
      */
     public function showForm(int $listingId)
     {
-        $listing    = Listing::findOrFail($listingId);
-        $candidate  = auth()->user();
-        $suggestedCv = $this->service->suggestLatestCv($candidate);
+        $listing   = Listing::findOrFail($listingId);
+        $candidate = auth()->user();
+
+        // Tất cả lần ứng tuyển của ứng viên cho job này (theo thứ tự round)
+        $allApps = \App\Models\Application::with('cv')
+            ->where('user_id', $candidate->id)
+            ->where('listing_id', $listingId)
+            ->orderBy('id')
+            ->get();
+
+        // Bản ghi lần ứng tuyển gần nhất (dùng cho autofill & isReapply)
+        $existingApp = $allApps->last(); // NULL nếu chưa ứng tuyển lần nào
+        // apply_round = tổng số lần đã bấm nộp (kể cả các lần update)
+        $applyCount  = $existingApp ? ($existingApp->apply_round ?? 1) : 0;
+        // Hồ sơ bị khoá: status ≠ submitted → không cho ứng tuyển lại
+        $isStatusLocked = $existingApp && $existingApp->status !== 'submitted';
+
+        // suggestedCv: ưu tiên CV của lần ứng tuyển gần nhất job này
+        if ($existingApp && $existingApp->cv) {
+            $suggestedCv = $existingApp->cv;
+        } else {
+            $suggestedCv = $this->service->suggestLatestCv($candidate);
+        }
+
+        // Autofill: ưu tiên thông tin đã lưu trong đơn job này,
+        // sau đó đơn gần nhất bất kỳ, cuối cùng mới lấy từ user profile
+        $sourceApp = $existingApp ?? \App\Models\Application::where('user_id', $candidate->id)
+            ->orderByDesc('applied_at')
+            ->first();
+
+        $autofill = [
+            'name'         => $sourceApp?->applicant_name  ?? $candidate->name,
+            'email'        => $sourceApp?->applicant_email ?? $candidate->email,
+            'phone'        => $sourceApp?->applicant_phone ?? $candidate->phone ?? '',
+            'cover_letter' => $existingApp?->cover_letter  ?? '',
+        ];
 
         return view('application.form', [
-            'listing'     => $listing,
-            'listingId'   => $listingId,
-            'suggestedCv' => $suggestedCv,
+            'listing'        => $listing,
+            'listingId'      => $listingId,
+            'suggestedCv'    => $suggestedCv,
+            'autofill'       => $autofill,
+            'existingApp'    => $existingApp,
+            'applyCount'     => $applyCount,
+            'maxRounds'      => \App\Models\Application::MAX_APPLY_ROUNDS,
+            'isStatusLocked' => $isStatusLocked,
         ]);
     }
 
@@ -49,6 +87,19 @@ class ApplicationController extends Controller
                 ->with('success', 'Ứng tuyển thành công!');
 
         } catch (\RuntimeException $e) {
+            // Giới hạn free account
+            if (str_starts_with($e->getMessage(), '__FREE_LIMIT__:')) {
+                return back()->with('error', 'Vị trí này đã nhận đủ số lượng hồ sơ thử nghiệm. Vui lòng tìm việc khác.');
+            }
+            // Hồ sơ đã được NTD xử lý, không cho ứng tuyển lại
+            if (str_starts_with($e->getMessage(), '__STATUS_LOCKED__:')) {
+                $msg = str_replace('__STATUS_LOCKED__:', '', $e->getMessage());
+                return back()->with('error', trim($msg));
+            }
+            // Vượt quá giới hạn 3 lần ứng tuyển
+            if (str_starts_with($e->getMessage(), '__MAX_REAPPLY__:')) {
+                return back()->with('error', 'Bạn đã ứng tuyển tối đa ' . \App\Models\Application::MAX_APPLY_ROUNDS . ' lần cho vị trí này.');
+            }
             return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             Log::error("Apply job failed: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
@@ -91,8 +142,9 @@ class ApplicationController extends Controller
     {
         $employer     = auth()->user();
         $applications = $this->service->listByJob($employer, $listingId);
+        $listing      = \App\Models\Listing::with('user')->findOrFail($listingId);
 
-        return view('application.applicant-list', compact('applications', 'listingId'));
+        return view('application.applicant-list', compact('applications', 'listingId', 'listing'));
     }
 
     /**

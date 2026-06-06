@@ -9,7 +9,10 @@ class Application extends Model
 {
     protected $fillable = [
         'user_id', 'listing_id', 'cv_id', 'cover_letter',
-        'status', 'applied_at', 'status_updated_at', 'interview_scheduled_at',
+        'status', 'apply_round', 'parent_application_id',
+        'applied_at', 'status_updated_at', 'interview_scheduled_at',
+        // Contact snapshot (SSOT — cả 2 phía đọc từ đây)
+        'applicant_name', 'applicant_phone', 'applicant_email',
     ];
 
     protected $casts = [
@@ -17,6 +20,9 @@ class Application extends Model
         'status_updated_at'       => 'datetime',
         'interview_scheduled_at'  => 'datetime',
     ];
+
+    /** Số lần ứng tuyển tối đa cho 1 job */
+    public const MAX_APPLY_ROUNDS = 3;
 
     /**
      * State machine theo yêu cầu nghiệp vụ:
@@ -59,4 +65,17 @@ class Application extends Model
     public function user(): BelongsTo    { return $this->belongsTo(User::class); }
     public function listing(): BelongsTo { return $this->belongsTo(Listing::class); }
     public function cv(): BelongsTo      { return $this->belongsTo(Cv::class); }
+
+    /** Bản ghi đơn đầu tiên (lần ứng tuyển 1) */
+    public function parentApplication(): BelongsTo
+    {
+        return $this->belongsTo(Application::class, 'parent_application_id');
+    }
+
+    /** Các lần ứng tuyển lại (chỉ dùng từ bản ghi cha) */
+    public function childApplications()
+    {
+        return $this->hasMany(Application::class, 'parent_application_id')
+                    ->orderBy('apply_round');
+    }
 }
