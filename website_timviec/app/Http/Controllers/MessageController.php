@@ -30,7 +30,15 @@ class MessageController extends Controller
                 ->whereNull('listing_id')
                 ->first();
 
-            if (!$conversation) {
+            if ($conversation) {
+                // Khôi phục nếu từng bị xóa/ẩn
+                if ($conversation->employer_id === $me->id) {
+                    $conversation->employer_deleted_at = null;
+                } else {
+                    $conversation->employee_deleted_at = null;
+                }
+                $conversation->save();
+            } else {
                 $conversation = Conversation::create([
                     'employer_id' => $employerId,
                     'employee_id' => $employeeId,
@@ -41,7 +49,7 @@ class MessageController extends Controller
             return redirect()->route('messages.show', $conversation->id);
         }
 
-        $conversations = Conversation::forUser($userId)
+        $conversations = Conversation::forUserActive($userId)
             ->with(['employer', 'employee', 'listing', 'latestMessage'])
             ->orderBy('updated_at', 'desc')
             ->get();
@@ -59,7 +67,20 @@ class MessageController extends Controller
             abort(403, 'Bạn không có quyền truy cập cuộc hội thoại này.');
         }
 
-        $conversations = Conversation::forUser($userId)
+        // Khôi phục hội thoại cho người dùng khi họ xem trực tiếp
+        if ($conversation->employer_id === $userId) {
+            if ($conversation->employer_deleted_at !== null) {
+                $conversation->employer_deleted_at = null;
+                $conversation->save();
+            }
+        } else {
+            if ($conversation->employee_deleted_at !== null) {
+                $conversation->employee_deleted_at = null;
+                $conversation->save();
+            }
+        }
+
+        $conversations = Conversation::forUserActive($userId)
             ->with(['employer', 'employee', 'listing', 'latestMessage'])
             ->orderBy('updated_at', 'desc')
             ->get();
@@ -103,6 +124,11 @@ class MessageController extends Controller
                 ->withInput();
         }
 
+        // Khôi phục cuộc trò chuyện cho cả hai bên khi có tin nhắn mới
+        $conversation->employer_deleted_at = null;
+        $conversation->employee_deleted_at = null;
+        $conversation->save();
+
         Message::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => $userId,
@@ -116,110 +142,65 @@ class MessageController extends Controller
 
     // ─── Kiểm duyệt 2 lớp ────────────────────────────────────────────────
    private function checkMessage(string $message, string $jobTitle): bool
-{
-    $apiKey = env('GEMINI_API_KEY');
-    if (!$apiKey) {
-        return true;
-    }
+   {
+       $apiKey = config('services.gemini.key') ?? env('GEMINI_API_KEY');
+       if (!$apiKey) {
+           return true;
+       }
 
-    // Cache theo nội dung — tránh gọi API trùng lặp
-    $cacheKey = 'msg_mod_' . md5(mb_strtolower(trim($message)));
-    $cached   = Cache::get($cacheKey);
-    if ($cached !== null) {
-        return $cached === 'ALLOWED';
-    }
+       // Cache theo nội dung — sử dụng v3 để bypass cache cũ
+       $cacheKey = 'msg_mod_v3_' . md5(mb_strtolower(trim($message)));
+       $cached   = Cache::get($cacheKey);
+       if ($cached !== null) {
+           return $cached === 'ALLOWED';
+       }
 
-    try {
-        $prompt = "Bạn là AI kiểm duyệt tin nhắn cho website tuyển dụng IT Việt Nam.\n"
-            . "Vị trí tuyển dụng: {$jobTitle}\n"
-            . "Tin nhắn người dùng gửi: \"{$message}\"\n\n"
-            . "Quy tắc:\n"
-            . "- ALLOWED: tin nhắn liên quan đến tuyển dụng, công việc, lương, phỏng vấn, kỹ năng, hồ sơ, chào hỏi lịch sự\n"
-            . "- BLOCKED: mọi nội dung KHÔNG liên quan đến tuyển dụng, kể cả câu hỏi vô nghĩa, bạo lực, tiền bạc cá nhân, tình cảm, spam\n"
-            . "- Khi nghi ngờ → BLOCKED\n\n"
-            . "Chỉ trả lời đúng 1 từ: ALLOWED hoặc BLOCKED";
+       try {
+           $prompt = "Bạn là AI kiểm duyệt tin nhắn cho website tuyển dụng IT Việt Nam.\n"
+               . "Vị trí tuyển dụng: {$jobTitle}\n"
+               . "Tin nhắn người dùng gửi: \"{$message}\"\n\n"
+               . "QUY TẮC PHÂN LOẠI:\n"
+               . "1. ALLOWED (HỢP LỆ): Chỉ cho phép các tin nhắn liên quan trực tiếp đến tuyển dụng IT, bao gồm:\n"
+               . "   - Chào hỏi lịch sự, xã giao phù hợp ngữ cảnh đi làm/phỏng vấn (ví dụ: Chào anh/chị, Cảm ơn bạn...)\n"
+               . "   - Hỏi/trả lời về vị trí công việc, nhiệm vụ, dự án, công nghệ sử dụng, cấu trúc phòng ban\n"
+               . "   - Hỏi/trao đổi về mức lương, thưởng, chế độ bảo hiểm, thời gian làm việc, chính sách công ty\n"
+               . "   - Trao đổi về hồ sơ ứng tuyển, CV, kinh nghiệm, kỹ năng của ứng viên\n"
+               . "   - Hẹn lịch phỏng vấn, liên hệ trao đổi công việc, gửi bài test chuyên môn\n\n"
+               . "2. BLOCKED (KHÔNG HỢP LỆ): Chặn tất cả các trường hợp còn lại, bao gồm:\n"
+               . "   - Các từ ngữ ngắn, cộc lốc, không có ngữ cảnh công việc rõ ràng (ví dụ: \"đi tù\", \"đói quá\", \"ăn cơm chưa\", \"đi chơi\", \"ừ\", \"ok\" đứng một mình mà không kèm nội dung công việc)\n"
+               . "   - Hỏi thô tục, hỏi thăm đời tư cá nhân, tán tỉnh, làm quen tình cảm (ví dụ: Bạn có người yêu chưa?, Tối nay đi chơi không?)\n"
+               . "   - Rao bán hàng hóa, quảng cáo dịch vụ không liên quan, spam link\n"
+               . "   - Từ ngữ tiêu cực, phạm pháp, tù tội, bạo lực, nhạy cảm, chửi thề, thô tục\n"
+               . "   - Nội dung vay mượn tiền bạc, đời sống riêng tư khác\n\n"
+               . "LƯU Ý QUAN TRỌNG:\n"
+               . "- Khi nghi ngờ hoặc không chắc chắn tin nhắn có liên quan đến công việc IT/tuyển dụng hay không -> Hãy chọn BLOCKED.\n"
+               . "- Một tin nhắn cụt lủn hoặc chứa nội dung nhạy cảm như \"đi tù\" hoàn toàn không liên quan đến công việc tuyển dụng và PHẢI BỊ BLOCKED.\n\n"
+               . "Chỉ trả lời duy nhất 1 từ: ALLOWED hoặc BLOCKED (không viết thêm gì khác).";
 
-        $response = Http::timeout(8)->post(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=' . $apiKey,
-            [
-                'contents'         => [['parts' => [['text' => $prompt]]]],
-                'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 5],
-            ]
-        );
+           $response = Http::timeout(8)->post(
+               'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey,
+               [
+                   'contents'         => [['parts' => [['text' => $prompt]]]],
+                   'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 5],
+               ]
+           );
 
-        if ($response->successful()) {
-            $result = strtoupper(trim($response->json('candidates.0.content.parts.0.text') ?? ''));
-            $result = str_contains($result, 'BLOCKED') ? 'BLOCKED' : 'ALLOWED';
-            Cache::put($cacheKey, $result, 3600);
-            Log::info("Gemini: [{$message}] => [{$result}]");
-            return $result === 'ALLOWED';
-        }
+           if ($response->successful()) {
+               $result = strtoupper(trim($response->json('candidates.0.content.parts.0.text') ?? ''));
+               $result = str_contains($result, 'BLOCKED') ? 'BLOCKED' : 'ALLOWED';
+               Cache::put($cacheKey, $result, 3600);
+               Log::info("Gemini 2.0: [{$message}] => [{$result}]");
+               return $result === 'ALLOWED';
+           }
 
-        Log::warning('Gemini error: ' . $response->status());
-        return true;
+           Log::warning('Gemini API error: ' . $response->status());
+           return true;
 
-    } catch (\Throwable $e) {
-        Log::error('Gemini exception: ' . $e->getMessage());
-        return true;
-    }
-}
-    // ─── Lớp 2: Gemini AI với cache ──────────────────────────────────────
-    private function checkWithGemini(string $message, string $jobTitle): bool
-    {
-        $apiKey = env('GEMINI_API_KEY');
-        if (!$apiKey) {
-            return true;
-        }
-
-        // Cache theo nội dung tin nhắn — cùng nội dung không gọi API lại
-        $cacheKey = 'msg_mod_' . md5(mb_strtolower(trim($message)));
-        $cached   = Cache::get($cacheKey);
-        if ($cached !== null) {
-            Log::info("Gemini cached: [{$message}] => [{$cached}]");
-            return $cached === 'ALLOWED';
-        }
-
-        try {
-            $prompt = <<<PROMPT
-Bạn là hệ thống kiểm duyệt cho website tuyển dụng IT Việt Nam.
-Vị trí tuyển dụng: {$jobTitle}
-Tin nhắn: "{$message}"
-
-Chỉ ALLOWED nếu tin nhắn liên quan rõ ràng đến: công việc, lương, phỏng vấn, kỹ năng, hồ sơ, quy trình tuyển dụng, hoặc chào hỏi lịch sự.
-BLOCKED nếu: không liên quan tuyển dụng, bạo lực, lừa đảo, nhạy cảm, vô nghĩa.
-Khi không chắc chắn → BLOCKED.
-
-Trả lời CHỈ 1 từ: ALLOWED hoặc BLOCKED
-PROMPT;
-
-            $response = Http::timeout(8)->post(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey,
-                [
-                    'contents'          => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig'  => ['temperature' => 0.1, 'maxOutputTokens' => 5],
-                ]
-            );
-
-            if ($response->successful()) {
-                $result = strtoupper(trim($response->json('candidates.0.content.parts.0.text') ?? 'ALLOWED'));
-                $result = str_contains($result, 'BLOCKED') ? 'BLOCKED' : 'ALLOWED';
-
-                // Cache kết quả 1 tiếng
-                Cache::put($cacheKey, $result, 3600);
-                Log::info("Gemini: [{$message}] => [{$result}]");
-
-                return $result === 'ALLOWED';
-            }
-
-            // API lỗi (rate limit...) → dùng lớp 1 đã lọc rồi, cho phép gửi
-            Log::warning('Gemini API error: ' . $response->status() . ' - ' . $response->body());
-            return true;
-
-        } catch (\Throwable $e) {
-            Log::error('Gemini exception: ' . $e->getMessage());
-            return true;
-        }
-    }
+       } catch (\Throwable $e) {
+           Log::error('Gemini exception: ' . $e->getMessage());
+           return true;
+       }
+   }
 
     // ─── Tạo hoặc tìm hội thoại ──────────────────────────────────────────
     public function findOrCreate(Request $request)
@@ -241,13 +222,48 @@ PROMPT;
             $employeeId = $request->input('employee_id');
         }
 
-        $conversation = Conversation::firstOrCreate([
-            'listing_id'  => $listing->id,
-            'employer_id' => $employerId,
-            'employee_id' => $employeeId,
-        ]);
+        $conversation = Conversation::where('listing_id', $listing->id)
+            ->where('employer_id', $employerId)
+            ->where('employee_id', $employeeId)
+            ->first();
+
+        if ($conversation) {
+            // Khôi phục hội thoại nếu từng bị xóa
+            if ($conversation->employer_id === $user->id) {
+                $conversation->employer_deleted_at = null;
+            } else {
+                $conversation->employee_deleted_at = null;
+            }
+            $conversation->save();
+        } else {
+            $conversation = Conversation::create([
+                'listing_id'  => $listing->id,
+                'employer_id' => $employerId,
+                'employee_id' => $employeeId,
+            ]);
+        }
 
         return redirect()->route('messages.show', $conversation->id);
+    }
+
+    // ─── Xóa/Ẩn cuộc hội thoại ──────────────────────────────────────────
+    public function destroy($id)
+    {
+        $userId = Auth::id();
+        $conversation = Conversation::findOrFail($id);
+
+        if ($conversation->employer_id !== $userId && $conversation->employee_id !== $userId) {
+            abort(403, 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        if ($conversation->employer_id === $userId) {
+            $conversation->employer_deleted_at = now();
+        } else {
+            $conversation->employee_deleted_at = now();
+        }
+        $conversation->save();
+
+        return redirect()->route('messages.index')->with('success', 'Đã xóa đoạn chat thành công.');
     }
 
     // ─── Poll tin nhắn mới ────────────────────────────────────────────────

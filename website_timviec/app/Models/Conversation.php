@@ -9,7 +9,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Conversation extends Model
 {
-    protected $fillable = ['listing_id', 'employer_id', 'employee_id'];
+    protected $fillable = ['listing_id', 'employer_id', 'employee_id', 'employer_deleted_at', 'employee_deleted_at'];
+
+    protected $casts = [
+        'employer_deleted_at' => 'datetime',
+        'employee_deleted_at' => 'datetime',
+    ];
 
     /**
      * Get the listing associated with the conversation.
@@ -59,6 +64,22 @@ class Conversation extends Model
         return $query->where(function ($q) use ($userId) {
             $q->where('employer_id', $userId)
               ->orWhere('employee_id', $userId);
+        });
+    }
+
+    /**
+     * Scope a query to only include conversations for a given user that haven't been deleted by them.
+     */
+    public function scopeForUserActive($query, int $userId)
+    {
+        return $query->where(function ($q) use ($userId) {
+            $q->where(function ($sq) use ($userId) {
+                $sq->where('employer_id', $userId)
+                   ->whereNull('employer_deleted_at');
+            })->orWhere(function ($sq) use ($userId) {
+                $sq->where('employee_id', $userId)
+                   ->whereNull('employee_deleted_at');
+            });
         });
     }
 

@@ -168,6 +168,15 @@ img { max-width: 100%; height: auto; }
   background: var(--danger);
   color: #fff;
 }
+.btn-outline-danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.btn-outline-danger:hover {
+  background: #FFF2EE;
+  color: var(--danger);
+}
 .btn-light {
   background: var(--bg-gray);
   color: var(--text-dark);

@@ -53,11 +53,20 @@
           @endif
         </div>
       </div>
-      @if($conversation->listing)
-        <a href="{{ url('/job/show/'.$conversation->listing->slug) }}" class="btn btn-outline btn-sm" style="margin-left:auto" target="_blank">
-          <i class="fas fa-external-link-alt"></i> Xem tin
-        </a>
-      @endif
+      <div class="flex gap-8" style="margin-left:auto; align-items:center">
+        @if($conversation->listing)
+          <a href="{{ url('/job/show/'.$conversation->listing->slug) }}" class="btn btn-outline btn-sm" target="_blank">
+            <i class="fas fa-external-link-alt"></i> Xem tin
+          </a>
+        @endif
+        <form action="{{ route('messages.destroy', $conversation->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đoạn chat này không? Toàn bộ lịch sử trò chuyện của bạn sẽ bị ẩn.')" style="margin:0">
+          @csrf
+          @method('DELETE')
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="fas fa-trash-alt"></i> Xóa đoạn chat
+          </button>
+        </form>
+      </div>
     </div>
 
     {{-- Messages --}}

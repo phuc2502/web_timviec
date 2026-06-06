@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ChatMessagingTest extends TestCase
@@ -21,6 +22,20 @@ class ChatMessagingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                ['text' => 'ALLOWED']
+                            ]
+                        ]
+                    ]
+                ]
+            ], 200)
+        ]);
 
         $this->employee = User::factory()->create([
             'user_type' => 'employee',
@@ -233,5 +248,83 @@ class ChatMessagingTest extends TestCase
                 'id' => $msg2->id,
                 'body' => 'Message 2',
             ]);
+    }
+
+    /** @test */
+    public function participant_can_delete_conversation()
+    {
+        $conversation = Conversation::create([
+            'listing_id' => $this->listing->id,
+            'employer_id' => $this->employer->id,
+            'employee_id' => $this->employee->id,
+        ]);
+
+        // Employee deletes conversation
+        $response = $this->actingAs($this->employee)
+            ->delete(route('messages.destroy', $conversation->id));
+
+        $response->assertRedirect(route('messages.index'));
+        $conversation->refresh();
+        $this->assertNotNull($conversation->employee_deleted_at);
+        $this->assertNull($conversation->employer_deleted_at);
+
+        // Check it doesn't show in the active scope for Employee
+        $activeConversations = Conversation::forUserActive($this->employee->id)->get();
+        $this->assertFalse($activeConversations->contains($conversation));
+
+        // But still shows for Employer
+        $activeConversationsEmployer = Conversation::forUserActive($this->employer->id)->get();
+        $this->assertTrue($activeConversationsEmployer->contains($conversation));
+    }
+
+    /** @test */
+    public function new_message_restores_conversation_for_both_users()
+    {
+        $conversation = Conversation::create([
+            'listing_id' => $this->listing->id,
+            'employer_id' => $this->employer->id,
+            'employee_id' => $this->employee->id,
+            'employee_deleted_at' => now(),
+            'employer_deleted_at' => now(),
+        ]);
+
+        $this->actingAs($this->employee)
+            ->post(route('messages.store', $conversation->id), [
+                'body' => 'Hello there, is this position still open?',
+            ]);
+
+        $conversation->refresh();
+        $this->assertNull($conversation->employee_deleted_at);
+        $this->assertNull($conversation->employer_deleted_at);
+    }
+
+    /** @test */
+    public function viewing_or_starting_conversation_restores_it()
+    {
+        $conversation = Conversation::create([
+            'listing_id' => $this->listing->id,
+            'employer_id' => $this->employer->id,
+            'employee_id' => $this->employee->id,
+            'employee_deleted_at' => now(),
+        ]);
+
+        // Viewing directly restores it
+        $this->actingAs($this->employee)
+            ->get(route('messages.show', $conversation->id));
+
+        $conversation->refresh();
+        $this->assertNull($conversation->employee_deleted_at);
+
+        // Hide it again
+        $conversation->update(['employee_deleted_at' => now()]);
+
+        // Starting it again restores it
+        $this->actingAs($this->employee)
+            ->post(route('messages.start'), [
+                'listing_id' => $this->listing->id,
+            ]);
+
+        $conversation->refresh();
+        $this->assertNull($conversation->employee_deleted_at);
     }
 }
