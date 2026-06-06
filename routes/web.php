@@ -80,6 +80,7 @@ Route::middleware(['auth', 'candidate'])->group(function () {
     Route::get('/user/cv/preview',   [UserController::class, 'showPreview'])->name('user.cv.preview');
     Route::get('/user/cv/download',  [UserController::class, 'downloadPdf'])->name('user.cv.download')->middleware('throttle:10,1');
     Route::delete('/user/cv/online', [UserController::class, 'deleteOnlineCv'])->name('user.cv.delete');
+    Route::post('/user/cv/ai-parse', [UserController::class, 'aiParseCv'])->name('user.cv.ai-parse')->middleware('throttle:5,60');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
