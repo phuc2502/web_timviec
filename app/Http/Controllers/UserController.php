@@ -236,6 +236,155 @@ class UserController extends Controller
     }
 
     /**
+     * POST user/cv/ai-parse — Trích xuất thông tin CV từ file PDF bằng AI.
+     */
+    public function aiParseCv(Request $request)
+    {
+        // 1. Kiểm tra request chứa file
+        if (!$request->hasFile('cv_file')) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng tải lên file CV dạng PDF.'
+            ], 422);
+        }
+
+        $file = $request->file('cv_file');
+
+        // 2. Kiểm tra PDF thực tế qua header signature %PDF
+        $handle = fopen($file->getRealPath(), 'r');
+        $header = fread($handle, 4);
+        fclose($handle);
+        if ($header !== '%PDF') {
+            return response()->json([
+                'success' => false,
+                'error' => 'File PDF không hợp lệ (Sai định dạng PDF thực tế).'
+            ], 422);
+        }
+
+        // 3. Lưu tạm vào thư mục temp_cvs trên disk local để dọn dẹp sau
+        $tempName = Str::uuid() . '.pdf';
+        $tempPath = $file->storeAs('temp_cvs', $tempName, 'local');
+        $fullPath = Storage::disk('local')->path($tempPath);
+
+        try {
+            // 4. Giải mã PDF thành text thông qua Smalot Parser (được resolve từ container để hỗ trợ Mocking trong Test)
+            $parser = app(\Smalot\PdfParser\Parser::class);
+            $pdfDocument = $parser->parseFile($fullPath);
+            $text = $pdfDocument->getText();
+
+            // 5. Kiểm tra xem PDF có chứa text copy được không hay chỉ là ảnh scan
+            if (mb_strlen(trim($text)) < 100) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'File PDF không chứa văn bản có thể sao chép (có thể là ảnh quét). Vui lòng tải lên file PDF định dạng text.'
+                ], 422);
+            }
+
+            // 6. Chuẩn bị gọi Gemini API
+            $apiKey = config('services.gemini.key');
+            $model = config('services.gemini.model', 'gemini-2.5-flash');
+
+            if (!$apiKey) {
+                throw new \Exception('Gemini API key is not configured.');
+            }
+
+            $prompt = "Bạn là trợ lý AI chuyên nghiệp phân tích CV. "
+                . "Hãy trích xuất thông tin từ đoạn văn bản CV sau và định dạng kết quả dưới dạng JSON duy nhất. "
+                . "JSON kết quả BẮT BUỘC phải tuân theo cấu trúc sau (các trường không có thông tin thì để null hoặc mảng rỗng []):\n"
+                . "{\n"
+                . "  \"full_name\": \"Họ và tên\",\n"
+                . "  \"email\": \"Địa chỉ email\",\n"
+                . "  \"phone\": \"Số điện thoại\",\n"
+                . "  \"address\": \"Địa chỉ nơi ở\",\n"
+                . "  \"objective\": \"Mục tiêu nghề nghiệp\",\n"
+                . "  \"skills_text\": \"Danh sách kỹ năng viết dưới dạng text phân tách bằng dấu phẩy, ví dụ: PHP, Laravel, VueJS\",\n"
+                . "  \"education\": [ {\"school\": \"Tên trường\", \"degree\": \"Bằng cấp/Chuyên ngành\", \"year_start\": \"Năm bắt đầu\", \"year_end\": \"Năm kết thúc\"} ],\n"
+                . "  \"experience\": [ {\"company\": \"Tên công ty\", \"role\": \"Vị trí\", \"year_start\": \"Năm bắt đầu\", \"year_end\": \"Năm kết thúc\", \"description\": \"Mô tả ngắn công việc\"} ],\n"
+                . "  \"projects\": [ {\"name\": \"Tên dự án\", \"role\": \"Vai trò\", \"description\": \"Mô tả dự án\"} ],\n"
+                . "  \"certifications\": [ {\"name\": \"Tên chứng chỉ\", \"year\": \"Năm đạt được\"} ],\n"
+                . "  \"languages\": [ {\"language\": \"Ngôn ngữ\", \"level\": \"Trình độ\"} ]\n"
+                . "}\n\n"
+                . "Lưu ý cực kỳ quan trọng: Chỉ trả về chuỗi JSON thô, không bọc trong các thẻ markdown ```json hay bất kỳ văn bản giải thích nào khác.\n\n"
+                . "Nội dung CV:\n" . $text;
+
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+            // Thiết lập timeout 30s
+            $response = \Illuminate\Support\Facades\Http::timeout(30)->post($url, [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json'
+                ]
+            ]);
+
+            // Xử lý mã lỗi HTTP
+            if ($response->status() === 429) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Hệ thống AI đang quá tải (vượt giới hạn lượt gọi). Vui lòng thử lại sau ít phút.'
+                ], 503);
+            }
+
+            if (!$response->successful()) {
+                Log::error('Gemini API call failed: ' . $response->body());
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Có lỗi xảy ra khi kết nối tới hệ thống AI. Vui lòng thử lại.'
+                ], 500);
+            }
+
+            // Giải mã kết quả trả về từ Gemini
+            $resultJson = $response->json();
+            $rawText = $resultJson['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+            if (!$rawText) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Không thể trích xuất dữ liệu từ CV.'
+                ], 500);
+            }
+
+            $extractedData = json_decode(trim($rawText), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('JSON Decode failed for Gemini response: ' . $rawText);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Định dạng phản hồi từ AI không hợp lệ.'
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $extractedData
+            ]);
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('Gemini API connection timeout: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Kết nối tới máy chủ AI bị quá thời gian phản hồi. Vui lòng thử lại.'
+            ], 504);
+        } catch (\Exception $e) {
+            Log::error('CV AI parse failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Đã có lỗi hệ thống xảy ra khi phân tích CV.'
+            ], 500);
+        } finally {
+            // 7. Dọn dẹp file tạm trên local disk
+            if (Storage::disk('local')->exists($tempPath)) {
+                Storage::disk('local')->delete($tempPath);
+            }
+        }
+    }
+
+    /**
      * DELETE user/cv/online — Xóa CV online.
      * Xóa bản ghi cv_data + dọn dẹp ảnh trên Storage.
      */
