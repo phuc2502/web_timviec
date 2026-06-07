@@ -1,0 +1,2262 @@
+openapi: 3.0.3
+info:
+  title: Web Tìm Việc API
+  description: |
+    Tài liệu API đầy đủ cho hệ thống **Web Tìm Việc** (Laravel).
+
+    ## Xác thực
+    Hầu hết các endpoint yêu cầu đăng nhập qua **Session Cookie** (Laravel Session).
+    Để test bằng Postman:
+    1. Gọi `POST /login` trước để lấy session cookie.
+    2. Postman tự động lưu cookie — các request tiếp theo sẽ được xác thực.
+    3. Thêm header `X-CSRF-TOKEN` (lấy từ meta tag trên trang) hoặc disable CSRF verification cho môi trường dev.
+
+    ## Phân quyền
+    - **Public** — Không cần đăng nhập
+    - **Auth** — Cần đăng nhập
+    - **Candidate** — Cần đăng nhập + role `employee`
+    - **Employer** — Cần đăng nhập + role `employer`
+    - **Admin** — Cần đăng nhập + role `admin`
+  version: "1.0.0"
+  contact:
+    name: Web Tìm Việc Team
+
+servers:
+  - url: http://localhost/web_timviec/public
+    description: XAMPP Local Server
+  - url: http://127.0.0.1:8000
+    description: Laravel Artisan Dev Server (php artisan serve)
+
+tags:
+  - name: Auth
+    description: Đăng ký, Đăng nhập, Đăng xuất, Xác minh email
+  - name: OAuth
+    description: Đăng nhập qua Google / GitHub
+  - name: Jobs
+    description: Danh sách và quản lý tin tuyển dụng
+  - name: Applications
+    description: Ứng tuyển và theo dõi hồ sơ
+  - name: CV
+    description: Quản lý CV (upload & online builder)
+  - name: Profile
+    description: Hồ sơ cá nhân người dùng
+  - name: Notifications
+    description: Hệ thống thông báo
+  - name: Payment
+    description: Thanh toán VNPay (token & subscription)
+  - name: Admin - Users
+    description: Quản trị viên - Quản lý người dùng
+  - name: Admin - Jobs
+    description: Quản trị viên - Quản lý tin tuyển dụng
+  - name: Admin - Transactions
+    description: Quản trị viên - Lịch sử giao dịch
+  - name: Admin - Notifications
+    description: Quản trị viên - Quản lý thông báo hệ thống
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ══════════════════════════════════════════════════════════════════
+  # AUTH
+  # ══════════════════════════════════════════════════════════════════
+
+  /login:
+    get:
+      tags: [Auth]
+      summary: Hiển thị trang đăng nhập
+      operationId: showLogin
+      security: []
+      responses:
+        "200":
+          description: Trả về HTML trang đăng nhập
+        "302":
+          description: Redirect về /dashboard nếu đã đăng nhập
+
+    post:
+      tags: [Auth]
+      summary: Đăng nhập tài khoản
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "302":
+          description: |
+            - Thành công: Redirect về dashboard (kèm session cookie)
+            - Thất bại: Redirect về /login với lỗi validation
+        "422":
+          description: Validation error (email/password không đúng)
+
+  /logout:
+    post:
+      tags: [Auth]
+      summary: Đăng xuất
+      operationId: logout
+      security:
+        - cookieAuth: []
+      responses:
+        "302":
+          description: Redirect về /login
+
+  /register:
+    get:
+      tags: [Auth]
+      summary: Trang chọn loại tài khoản (employee / employer)
+      operationId: showRegister
+      security: []
+      responses:
+        "200":
+          description: HTML trang chọn role
+
+  /register/employee:
+    get:
+      tags: [Auth]
+      summary: Form đăng ký ứng viên
+      operationId: showRegisterEmployee
+      security: []
+      responses:
+        "200":
+          description: HTML form đăng ký ứng viên
+
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản ứng viên
+      operationId: registerEmployee
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterEmployeeRequest'
+      responses:
+        "302":
+          description: |
+            - Thành công: Redirect về /email/verify
+            - Thất bại: Redirect về /register/employee với lỗi
+
+  /register/employer:
+    get:
+      tags: [Auth]
+      summary: Form đăng ký nhà tuyển dụng
+      operationId: showRegisterEmployer
+      security: []
+      responses:
+        "200":
+          description: HTML form đăng ký nhà tuyển dụng
+
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản nhà tuyển dụng
+      operationId: registerEmployer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterEmployerRequest'
+      responses:
+        "302":
+          description: Redirect về /email/verify sau khi đăng ký thành công
+
+  /forgot-password:
+    get:
+      tags: [Auth]
+      summary: Form quên mật khẩu
+      operationId: showForgotForm
+      security: []
+      responses:
+        "200":
+          description: HTML form nhập email
+
+    post:
+      tags: [Auth]
+      summary: Gửi link đặt lại mật khẩu
+      operationId: sendResetLink
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        "302":
+          description: Redirect với thông báo gửi email thành công
+
+  /reset-password/{token}:
+    get:
+      tags: [Auth]
+      summary: Form đặt lại mật khẩu
+      operationId: showResetForm
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML form đặt lại mật khẩu
+
+  /reset-password:
+    post:
+      tags: [Auth]
+      summary: Đặt lại mật khẩu
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token, email, password, password_confirmation]
+              properties:
+                token:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                password_confirmation:
+                  type: string
+                  format: password
+      responses:
+        "302":
+          description: Redirect về /login sau khi reset thành công
+
+  /email/verify:
+    get:
+      tags: [Auth]
+      summary: Trang thông báo xác minh email
+      operationId: verificationNotice
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang thông báo
+
+  /email/verification-notification:
+    post:
+      tags: [Auth]
+      summary: Gửi lại email xác minh
+      operationId: resendVerification
+      security:
+        - cookieAuth: []
+      responses:
+        "302":
+          description: Redirect với thông báo đã gửi lại email
+
+  # ══════════════════════════════════════════════════════════════════
+  # OAUTH
+  # ══════════════════════════════════════════════════════════════════
+
+  /auth/google:
+    get:
+      tags: [OAuth]
+      summary: Redirect đến Google OAuth
+      operationId: googleRedirect
+      security: []
+      responses:
+        "302":
+          description: Redirect đến Google để xác thực
+
+  /auth/google/callback:
+    get:
+      tags: [OAuth]
+      summary: Callback từ Google OAuth
+      operationId: googleCallback
+      security: []
+      responses:
+        "302":
+          description: Redirect về dashboard hoặc trang chọn role
+
+  /auth/github:
+    get:
+      tags: [OAuth]
+      summary: Redirect đến GitHub OAuth
+      operationId: githubRedirect
+      security: []
+      responses:
+        "302":
+          description: Redirect đến GitHub để xác thực
+
+  /auth/github/callback:
+    get:
+      tags: [OAuth]
+      summary: Callback từ GitHub OAuth
+      operationId: githubCallback
+      security: []
+      responses:
+        "302":
+          description: Redirect về dashboard hoặc trang chọn role
+
+  # ══════════════════════════════════════════════════════════════════
+  # JOBS (Public)
+  # ══════════════════════════════════════════════════════════════════
+
+  /job:
+    get:
+      tags: [Jobs]
+      summary: Danh sách tin tuyển dụng (public)
+      operationId: jobIndex
+      security: []
+      parameters:
+        - name: search
+          in: query
+          description: Tìm kiếm theo tiêu đề hoặc mô tả
+          schema:
+            type: string
+            example: "Lập trình viên"
+        - name: address
+          in: query
+          description: Lọc theo địa điểm
+          schema:
+            type: string
+            example: "Hà Nội"
+        - name: job_type
+          in: query
+          description: Lọc theo loại hình công việc
+          schema:
+            type: string
+            enum: [full-time, part-time, remote, freelance]
+        - name: page
+          in: query
+          description: Số trang (phân trang 12 items/trang)
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: HTML trang danh sách công việc
+
+  /job/show/{slug}:
+    get:
+      tags: [Jobs]
+      summary: Chi tiết một tin tuyển dụng
+      operationId: jobShow
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Slug của tin tuyển dụng
+          schema:
+            type: string
+            example: lap-trinh-vien-php-abcdef
+      responses:
+        "200":
+          description: HTML trang chi tiết công việc
+        "404":
+          description: Không tìm thấy tin
+
+  # ══════════════════════════════════════════════════════════════════
+  # JOBS (Employer - Quản lý tin)
+  # ══════════════════════════════════════════════════════════════════
+
+  /job/create:
+    get:
+      tags: [Jobs]
+      summary: Form đăng tin tuyển dụng mới (Employer)
+      operationId: jobCreate
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML form đăng tin
+        "403":
+          description: Không có quyền (không phải employer)
+
+  /job/store:
+    post:
+      tags: [Jobs]
+      summary: Lưu tin tuyển dụng mới (Employer)
+      operationId: jobStore
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JobStoreRequest'
+      responses:
+        "302":
+          description: |
+            - Thành công: Redirect về /job/manage
+            - Thất bại: Redirect về /payment/subscription (hết quota free)
+        "422":
+          description: Validation error
+
+  /job/manage:
+    get:
+      tags: [Jobs]
+      summary: Quản lý danh sách tin đăng của employer
+      operationId: jobManage
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang quản lý tin đăng
+
+  /job/{id}/edit:
+    get:
+      tags: [Jobs]
+      summary: Form chỉnh sửa tin tuyển dụng
+      operationId: jobEdit
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML form chỉnh sửa
+        "404":
+          description: Không tìm thấy hoặc không có quyền
+
+  /job/{id}/update:
+    put:
+      tags: [Jobs]
+      summary: Cập nhật tin tuyển dụng (Employer)
+      operationId: jobUpdate
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JobUpdateRequest'
+      responses:
+        "302":
+          description: Redirect về /job/manage sau khi cập nhật
+
+  /job/{id}/delete:
+    delete:
+      tags: [Jobs]
+      summary: Xóa tin tuyển dụng (Employer)
+      operationId: jobDestroy
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect về /job/manage sau khi xóa
+
+  # ══════════════════════════════════════════════════════════════════
+  # APPLICATIONS (Candidate)
+  # ══════════════════════════════════════════════════════════════════
+
+  /apply/{listingId}:
+    get:
+      tags: [Applications]
+      summary: Form ứng tuyển công việc (Candidate)
+      operationId: applyForm
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML form ứng tuyển (có autofill từ hồ sơ)
+        "403":
+          description: Không phải candidate
+
+  /apply:
+    post:
+      tags: [Applications]
+      summary: Nộp đơn ứng tuyển (Candidate)
+      operationId: applySubmit
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApplyJobRequest'
+      responses:
+        "302":
+          description: |
+            - Thành công: Redirect về /candidate/history
+            - Thất bại: Redirect về form với lỗi
+
+  /candidate/history:
+    get:
+      tags: [Applications]
+      summary: Lịch sử ứng tuyển của ứng viên
+      operationId: candidateHistory
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang lịch sử ứng tuyển
+
+  /candidate/applications/{id}:
+    get:
+      tags: [Applications]
+      summary: Chi tiết đơn ứng tuyển của ứng viên
+      operationId: candidateApplicationDetail
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML chi tiết đơn
+        "404":
+          description: Không tìm thấy đơn
+
+  # ══════════════════════════════════════════════════════════════════
+  # APPLICATIONS (Employer)
+  # ══════════════════════════════════════════════════════════════════
+
+  /employer/jobs/{listingId}/applicants:
+    get:
+      tags: [Applications]
+      summary: Danh sách ứng viên theo tin đăng (Employer)
+      operationId: applicantList
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML trang danh sách ứng viên
+
+  /employer/applications/{id}:
+    get:
+      tags: [Applications]
+      summary: Chi tiết hồ sơ ứng viên (Employer)
+      description: Tự động chuyển trạng thái `submitted` → `viewed` khi employer xem.
+      operationId: viewApplicationDetail
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML chi tiết hồ sơ
+        "404":
+          description: Không tìm thấy
+
+  /employer/applications/{id}/status:
+    patch:
+      tags: [Applications]
+      summary: Cập nhật trạng thái đơn ứng tuyển (Employer)
+      operationId: updateApplicationStatus
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [viewed, shortlisted, interview_scheduled, hired, rejected]
+                  example: shortlisted
+                interview_scheduled_at:
+                  type: string
+                  format: date-time
+                  example: "2026-07-01T09:00:00"
+                  description: Bắt buộc nếu status = interview_scheduled
+      responses:
+        "302":
+          description: Redirect về trang trước với thông báo thành công/thất bại
+
+  /shortlist/{listingId}/{applicantId}:
+    post:
+      tags: [Applications]
+      summary: Toggle shortlist ứng viên (Employer)
+      operationId: toggleShortlist
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: applicantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect về trang trước
+
+  # ══════════════════════════════════════════════════════════════════
+  # CV (Candidate)
+  # ══════════════════════════════════════════════════════════════════
+
+  /user/cv:
+    get:
+      tags: [CV]
+      summary: Trang quản lý CV (upload + online CV)
+      operationId: cvPage
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang quản lý CV
+
+    post:
+      tags: [CV]
+      summary: Upload file CV (PDF/DOC/DOCX, tối đa 5MB)
+      operationId: uploadCv
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [cv_file]
+              properties:
+                cv_file:
+                  type: string
+                  format: binary
+                  description: File CV (PDF, DOC, DOCX — tối đa 5MB)
+      responses:
+        "302":
+          description: Redirect về /user/cv sau khi upload thành công
+        "422":
+          description: Validation error (sai định dạng hoặc vượt giới hạn)
+
+  /user/cv/view:
+    get:
+      tags: [CV]
+      summary: Xem file CV đã upload (inline trong trình duyệt)
+      operationId: viewCv
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: File CV (PDF/DOC)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "302":
+          description: Redirect về /user/cv nếu chưa có CV
+
+  /user/cv/create:
+    get:
+      tags: [CV]
+      summary: Form tạo/chỉnh sửa CV online
+      operationId: createCv
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML form CV online builder
+
+  /user/cv/preview:
+    get:
+      tags: [CV]
+      summary: Xem preview CV online
+      operationId: showCvPreview
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML preview CV theo template đã chọn
+        "302":
+          description: Redirect về /user/cv/create nếu chưa có dữ liệu
+
+    post:
+      tags: [CV]
+      summary: Lưu dữ liệu CV online
+      operationId: saveCv
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CvFormRequest'
+      responses:
+        "302":
+          description: Redirect về /user/cv/preview sau khi lưu
+
+  /user/cv/download:
+    get:
+      tags: [CV]
+      summary: Tải xuống CV dạng PDF
+      operationId: downloadCvPdf
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: File PDF CV
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /user/cv/online:
+    delete:
+      tags: [CV]
+      summary: Xóa CV online
+      operationId: deleteOnlineCv
+      security:
+        - cookieAuth: []
+      responses:
+        "302":
+          description: Redirect về /user/cv/create sau khi xóa
+
+  /user/cv/ai-parse:
+    post:
+      tags: [CV]
+      summary: Trích xuất thông tin CV bằng AI (Gemini)
+      description: |
+        Upload file PDF và AI sẽ tự động phân tích, trả về JSON với thông tin
+        họ tên, email, phone, kinh nghiệm, học vấn, kỹ năng…
+        **Rate limit**: 5 lần/60 phút.
+      operationId: aiParseCv
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [cv_file]
+              properties:
+                cv_file:
+                  type: string
+                  format: binary
+                  description: File PDF chứa CV (phải có text, không phải ảnh scan)
+      responses:
+        "200":
+          description: Dữ liệu CV được trích xuất thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiParseCvResponse'
+        "422":
+          description: File không hợp lệ hoặc không chứa text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Lỗi AI hoặc lỗi hệ thống
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "503":
+          description: AI quá tải (vượt giới hạn lượt gọi)
+
+  # ══════════════════════════════════════════════════════════════════
+  # PROFILE
+  # ══════════════════════════════════════════════════════════════════
+
+  /user/profile:
+    get:
+      tags: [Profile]
+      summary: Trang hồ sơ cá nhân
+      operationId: profileShow
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang hồ sơ
+
+  /user/profile/employee:
+    post:
+      tags: [Profile]
+      summary: Cập nhật hồ sơ ứng viên
+      operationId: updateEmployeeProfile
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployeeProfileRequest'
+      responses:
+        "302":
+          description: Redirect về /user/profile với thông báo thành công
+
+  /user/profile/employer:
+    post:
+      tags: [Profile]
+      summary: Cập nhật hồ sơ nhà tuyển dụng
+      operationId: updateEmployerProfile
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployerProfileRequest'
+      responses:
+        "302":
+          description: Redirect về /user/profile với thông báo thành công
+
+  /user/profile/password:
+    post:
+      tags: [Profile]
+      summary: Đổi mật khẩu
+      operationId: updatePassword
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        "302":
+          description: Redirect về /user/profile sau khi đổi thành công
+
+  /user/mail:
+    post:
+      tags: [Profile]
+      summary: Bật/tắt nhận email thông báo
+      operationId: toggleMail
+      security:
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                mail:
+                  type: boolean
+                  description: Có trong request = bật, không có = tắt
+      responses:
+        "302":
+          description: Redirect về trang trước
+
+  /user/notification-settings:
+    post:
+      tags: [Profile]
+      summary: Cập nhật cài đặt thông báo chi tiết
+      operationId: updateNotificationSettings
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationSettingsRequest'
+      responses:
+        "302":
+          description: Redirect về trang trước
+
+  # ══════════════════════════════════════════════════════════════════
+  # NOTIFICATIONS
+  # ══════════════════════════════════════════════════════════════════
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Danh sách thông báo
+      description: |
+        - Nếu gửi kèm `Accept: application/json` hoặc `X-Requested-With: XMLHttpRequest`
+          → trả JSON (dùng cho notification bell dropdown).
+        - Nếu request thông thường → trả HTML trang danh sách thông báo.
+      operationId: notificationsIndex
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+            example: application/json
+          description: Gửi `application/json` để nhận JSON response
+      responses:
+        "200":
+          description: Danh sách thông báo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsResponse'
+            text/html:
+              schema:
+                type: string
+
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Đánh dấu tất cả thông báo là đã đọc
+      operationId: markAllNotificationsRead
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: OK (JSON nếu AJAX)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        "302":
+          description: Redirect (nếu form POST thông thường)
+
+  /notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Đánh dấu một thông báo là đã đọc
+      operationId: markNotificationRead
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK (JSON nếu AJAX)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ══════════════════════════════════════════════════════════════════
+  # PAYMENT (Candidate — mua token)
+  # ══════════════════════════════════════════════════════════════════
+
+  /payment/token:
+    get:
+      tags: [Payment]
+      summary: Trang chọn gói mua lượt ứng tuyển (Candidate)
+      operationId: tokenPurchasePage
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang chọn gói token
+
+    post:
+      tags: [Payment]
+      summary: Khởi tạo link thanh toán VNPay mua token (Candidate)
+      operationId: initiateTokenPurchase
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [package]
+              properties:
+                package:
+                  type: integer
+                  description: Gói token (1=5 lượt, 2=10 lượt, 3=20 lượt)
+                  enum: [1, 2, 3]
+                  example: 1
+      responses:
+        "302":
+          description: Redirect đến URL thanh toán VNPay
+
+  /payment/token/callback:
+    get:
+      tags: [Payment]
+      summary: Callback VNPay sau khi mua token (người dùng redirect về)
+      operationId: tokenCallback
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: vnp_ResponseCode
+          in: query
+          schema:
+            type: string
+            example: "00"
+        - name: vnp_TxnRef
+          in: query
+          schema:
+            type: string
+        - name: vnp_Amount
+          in: query
+          schema:
+            type: string
+        - name: vnp_SecureHash
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: |
+            - Thành công: Redirect về /candidate/history
+            - Thất bại: Redirect về /payment/token với lỗi
+
+  /payment/token/ipn:
+    post:
+      tags: [Payment]
+      summary: VNPay IPN server-to-server (mua token)
+      description: Endpoint này được VNPay gọi trực tiếp, không qua trình duyệt. Không cần auth.
+      operationId: tokenIpn
+      security: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VnpayIpnRequest'
+      responses:
+        "200":
+          description: Kết quả xử lý IPN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VnpayIpnResponse'
+
+  # ══════════════════════════════════════════════════════════════════
+  # PAYMENT (Employer — subscription)
+  # ══════════════════════════════════════════════════════════════════
+
+  /payment/subscription:
+    get:
+      tags: [Payment]
+      summary: Trang chọn gói Premium (Employer)
+      operationId: subscriptionPage
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang chọn gói Premium
+
+    post:
+      tags: [Payment]
+      summary: Khởi tạo link thanh toán VNPay mua gói Premium (Employer)
+      operationId: initiateSubscription
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan:
+                  type: string
+                  description: Gói premium (monthly / yearly)
+                  enum: [monthly, yearly]
+                  example: monthly
+      responses:
+        "302":
+          description: Redirect đến URL thanh toán VNPay
+
+  /payment/subscription/callback:
+    get:
+      tags: [Payment]
+      summary: Callback VNPay sau khi mua subscription (Employer)
+      operationId: subscriptionCallback
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: vnp_ResponseCode
+          in: query
+          schema:
+            type: string
+        - name: vnp_TxnRef
+          in: query
+          schema:
+            type: string
+        - name: vnp_SecureHash
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: |
+            - Thành công: Redirect về /employer/subscription
+            - Thất bại: Redirect về /payment/subscription
+
+  /payment/subscription/ipn:
+    post:
+      tags: [Payment]
+      summary: VNPay IPN server-to-server (subscription)
+      description: Endpoint được VNPay gọi tự động, không cần auth.
+      operationId: subscriptionIpn
+      security: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VnpayIpnRequest'
+      responses:
+        "200":
+          description: Kết quả xử lý IPN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VnpayIpnResponse'
+
+  /employer/subscription:
+    get:
+      tags: [Payment]
+      summary: Xem trạng thái gói Premium hiện tại (Employer)
+      operationId: subscriptionStatus
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang trạng thái gói
+
+  # ══════════════════════════════════════════════════════════════════
+  # DASHBOARD
+  # ══════════════════════════════════════════════════════════════════
+
+  /dashboard:
+    get:
+      tags: [Auth]
+      summary: Trang dashboard (tự rẽ nhánh theo role)
+      operationId: dashboard
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML dashboard phù hợp với role (employee/employer/admin)
+
+  # ══════════════════════════════════════════════════════════════════
+  # ADMIN — USERS
+  # ══════════════════════════════════════════════════════════════════
+
+  /admin/users:
+    get:
+      tags: [Admin - Users]
+      summary: Danh sách người dùng hệ thống
+      operationId: adminUsers
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            example: "Nguyen Van A"
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [employee, employer]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, banned]
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML trang danh sách users
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin - Users]
+      summary: Trang chi tiết tài khoản người dùng
+      operationId: adminUserShow
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML trang chi tiết user
+        "404":
+          description: Không tìm thấy user
+
+    delete:
+      tags: [Admin - Users]
+      summary: Xóa tài khoản người dùng
+      operationId: adminDeleteUser
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect về /admin/users sau khi xóa
+
+  /admin/users/{id}/detail:
+    get:
+      tags: [Admin - Users]
+      summary: Chi tiết user dạng JSON (dùng cho modal popup)
+      operationId: adminUserDetail
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Thông tin chi tiết user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetailResponse'
+
+  /admin/users/{id}/role:
+    post:
+      tags: [Admin - Users]
+      summary: Cập nhật vai trò người dùng
+      operationId: adminUpdateRole
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [user_type]
+              properties:
+                user_type:
+                  type: string
+                  enum: [employee, employer, admin]
+      responses:
+        "302":
+          description: Redirect với thông báo thành công
+
+  /admin/users/{id}/plan:
+    post:
+      tags: [Admin - Users]
+      summary: Cập nhật gói Premium/Trial cho user
+      operationId: adminUpdatePlan
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan:
+                  type: string
+                  enum: [free, trial, premium]
+      responses:
+        "302":
+          description: Redirect với thông báo thành công
+
+  /admin/users/{id}/ban:
+    post:
+      tags: [Admin - Users]
+      summary: Khóa/Mở khóa tài khoản người dùng
+      operationId: adminToggleBan
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect với thông báo Khóa/Mở khóa thành công
+
+  /admin/users/{id}/notification-settings:
+    post:
+      tags: [Admin - Users]
+      summary: Cập nhật cài đặt thông báo của user (Admin)
+      operationId: adminUpdateNotificationSettings
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationSettingsRequest'
+      responses:
+        "302":
+          description: Redirect với thông báo thành công
+
+  # ══════════════════════════════════════════════════════════════════
+  # ADMIN — JOBS
+  # ══════════════════════════════════════════════════════════════════
+
+  /admin/jobs:
+    get:
+      tags: [Admin - Jobs]
+      summary: Danh sách tất cả tin tuyển dụng
+      operationId: adminJobs
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, open, hidden, closed]
+        - name: job_type
+          in: query
+          schema:
+            type: string
+            enum: [full-time, part-time, remote, freelance]
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML trang danh sách jobs
+
+  /admin/jobs/pending:
+    get:
+      tags: [Admin - Jobs]
+      summary: Danh sách tin chờ duyệt
+      operationId: adminPendingJobs
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: job_type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML trang duyệt tin
+
+  /admin/jobs/{id}:
+    delete:
+      tags: [Admin - Jobs]
+      summary: Xóa tin tuyển dụng
+      operationId: adminDeleteJob
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect về /admin/jobs
+
+  /admin/jobs/{id}/detail:
+    get:
+      tags: [Admin - Jobs]
+      summary: Chi tiết tin tuyển dụng dạng JSON (dùng cho modal)
+      operationId: adminJobDetail
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chi tiết job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminJobDetailResponse'
+
+  /admin/jobs/{id}/status:
+    post:
+      tags: [Admin - Jobs]
+      summary: Thay đổi trạng thái tin tuyển dụng
+      operationId: adminToggleJobStatus
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, open, hidden, closed]
+      responses:
+        "302":
+          description: Redirect với thông báo thành công
+
+  /admin/jobs/{id}/approve:
+    post:
+      tags: [Admin - Jobs]
+      summary: Duyệt tin tuyển dụng (status pending → open)
+      operationId: adminApproveJob
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect với thông báo duyệt thành công
+
+  /admin/jobs/{id}/reject:
+    post:
+      tags: [Admin - Jobs]
+      summary: Từ chối tin tuyển dụng (status pending → hidden)
+      operationId: adminRejectJob
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Lý do từ chối (tùy chọn)
+      responses:
+        "302":
+          description: Redirect với thông báo từ chối thành công
+
+  # ══════════════════════════════════════════════════════════════════
+  # ADMIN — TRANSACTIONS
+  # ══════════════════════════════════════════════════════════════════
+
+  /admin/transactions:
+    get:
+      tags: [Admin - Transactions]
+      summary: Danh sách lịch sử giao dịch thanh toán
+      operationId: adminTransactions
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Tìm theo mã giao dịch VNPay hoặc tên/email user
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [paid, pending, failed]
+        - name: plan
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML trang lịch sử giao dịch
+
+  # ══════════════════════════════════════════════════════════════════
+  # ADMIN — NOTIFICATIONS
+  # ══════════════════════════════════════════════════════════════════
+
+  /admin/notifications:
+    get:
+      tags: [Admin - Notifications]
+      summary: Quản lý thông báo hệ thống
+      operationId: adminNotificationsIndex
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: HTML trang quản lý thông báo
+
+  /admin/notifications/stats:
+    get:
+      tags: [Admin - Notifications]
+      summary: Thống kê thông báo
+      operationId: adminNotificationStats
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: JSON thống kê thông báo
+
+  /admin/notifications/data:
+    get:
+      tags: [Admin - Notifications]
+      summary: Dữ liệu danh sách thông báo (JSON)
+      operationId: adminNotificationData
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: JSON danh sách thông báo
+
+  /admin/notifications/broadcast:
+    post:
+      tags: [Admin - Notifications]
+      summary: Broadcast thông báo tới nhiều user
+      operationId: adminBroadcastNotification
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [title, message]
+              properties:
+                title:
+                  type: string
+                  example: "Thông báo bảo trì hệ thống"
+                message:
+                  type: string
+                  example: "Hệ thống sẽ bảo trì lúc 22:00 tối nay."
+                target:
+                  type: string
+                  description: "Đối tượng nhận: all / employee / employer"
+                  enum: [all, employee, employer]
+                  default: all
+      responses:
+        "302":
+          description: Redirect với thông báo gửi thành công
+
+  /admin/notifications/cleanup:
+    post:
+      tags: [Admin - Notifications]
+      summary: Dọn dẹp thông báo cũ
+      operationId: adminNotificationCleanup
+      security:
+        - cookieAuth: []
+      responses:
+        "302":
+          description: Redirect với thông báo dọn dẹp thành công
+
+  /admin/notifications/{id}:
+    delete:
+      tags: [Admin - Notifications]
+      summary: Xóa một thông báo
+      operationId: adminDeleteNotification
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "302":
+          description: Redirect với thông báo xóa thành công
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: web_timviec_session
+      description: |
+        Laravel session cookie. Để test bằng Postman:
+        1. Gọi POST /login → Postman tự lưu cookie
+        2. Gọi các endpoint tiếp theo → session cookie tự được gửi kèm
+        3. Thêm header `X-CSRF-TOKEN` nếu gặp lỗi 419 (lấy từ response cookie `XSRF-TOKEN`)
+
+  schemas:
+
+    # ── Auth ────────────────────────────────────────────────
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: "password123"
+        remember:
+          type: boolean
+          default: false
+          description: Ghi nhớ đăng nhập
+
+    RegisterEmployeeRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: "Nguyễn Văn A"
+        email:
+          type: string
+          format: email
+          example: "nva@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "password123"
+        password_confirmation:
+          type: string
+          format: password
+          example: "password123"
+
+    RegisterEmployerRequest:
+      type: object
+      required: [name, email, password, password_confirmation, company_name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: "Trần Thị B"
+        email:
+          type: string
+          format: email
+          example: "ttb@company.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "password123"
+        password_confirmation:
+          type: string
+          format: password
+          example: "password123"
+        company_name:
+          type: string
+          maxLength: 255
+          example: "Công ty TNHH ABC"
+
+    # ── Jobs ─────────────────────────────────────────────────
+    JobStoreRequest:
+      type: object
+      required: [title, description, address, job_type]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: "Lập trình viên PHP Senior"
+        description:
+          type: string
+          example: "Mô tả chi tiết công việc..."
+        roles:
+          type: string
+          example: "Backend Developer"
+          description: Vị trí/chức danh cụ thể
+        predes:
+          type: string
+          example: "Yêu cầu 3 năm kinh nghiệm PHP/Laravel"
+          description: Yêu cầu ứng viên
+        address:
+          type: string
+          maxLength: 255
+          example: "Quận 1, TP.HCM"
+        job_type:
+          type: string
+          enum: [full-time, part-time, remote, freelance]
+          example: full-time
+        salary:
+          type: integer
+          minimum: 0
+          example: 15000000
+          description: Mức lương (VNĐ)
+        application_close_date:
+          type: string
+          format: date
+          example: "2026-08-31"
+          description: Ngày đóng hồ sơ (phải sau ngày hôm nay)
+
+    JobUpdateRequest:
+      type: object
+      required: [title, description, address, job_type]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: "Lập trình viên PHP Senior (Updated)"
+        description:
+          type: string
+        roles:
+          type: string
+        predes:
+          type: string
+        address:
+          type: string
+          maxLength: 255
+        job_type:
+          type: string
+          enum: [full-time, part-time, remote, freelance]
+        salary:
+          type: integer
+          minimum: 0
+        application_close_date:
+          type: string
+          format: date
+
+    # ── Applications ─────────────────────────────────────────
+    ApplyJobRequest:
+      type: object
+      required: [listing_id, applicant_name, applicant_email, applicant_phone]
+      properties:
+        listing_id:
+          type: integer
+          example: 42
+        applicant_name:
+          type: string
+          example: "Nguyễn Văn A"
+        applicant_email:
+          type: string
+          format: email
+          example: "nva@example.com"
+        applicant_phone:
+          type: string
+          example: "0901234567"
+        cover_letter:
+          type: string
+          example: "Tôi rất quan tâm đến vị trí này..."
+        cv_file:
+          type: string
+          format: binary
+          description: File CV mới (tùy chọn, nếu không gửi sẽ dùng CV đã upload)
+        cv_id:
+          type: integer
+          description: ID của CV đã upload trước (tùy chọn)
+
+    # ── CV ───────────────────────────────────────────────────
+    CvFormRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          example: "Nguyễn Văn A"
+        phone:
+          type: string
+          example: "0901234567"
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+          example: "Hà Nội"
+        objective:
+          type: string
+          example: "Mục tiêu nghề nghiệp..."
+        skills_text:
+          type: string
+          example: "PHP, Laravel, Vue.js, MySQL"
+        education:
+          type: string
+          description: JSON string danh sách học vấn
+          example: '[{"school":"Đại học Bách Khoa","degree":"Kỹ sư CNTT","year_start":"2018","year_end":"2022"}]'
+        experience:
+          type: string
+          description: JSON string danh sách kinh nghiệm
+          example: '[{"company":"ABC Corp","role":"Backend Dev","year_start":"2022","year_end":"2024","description":"Phát triển API"}]'
+        projects:
+          type: string
+          description: JSON string danh sách dự án
+        certifications:
+          type: string
+          description: JSON string danh sách chứng chỉ
+        languages:
+          type: string
+          description: JSON string danh sách ngôn ngữ
+        template:
+          type: string
+          description: Template CV
+          enum: [default, modern, classic]
+          example: modern
+        photo:
+          type: string
+          format: binary
+          description: Ảnh đại diện CV (JPG/PNG, tối đa 2MB)
+
+    AiParseCvResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            full_name:
+              type: string
+              example: "Nguyễn Văn A"
+            email:
+              type: string
+              example: "nva@example.com"
+            phone:
+              type: string
+              example: "0901234567"
+            address:
+              type: string
+              example: "Hà Nội"
+            objective:
+              type: string
+            skills_text:
+              type: string
+              example: "PHP, Laravel, MySQL, Vue.js"
+            education:
+              type: array
+              items:
+                type: object
+                properties:
+                  school: { type: string }
+                  degree: { type: string }
+                  year_start: { type: string }
+                  year_end: { type: string }
+            experience:
+              type: array
+              items:
+                type: object
+                properties:
+                  company: { type: string }
+                  role: { type: string }
+                  year_start: { type: string }
+                  year_end: { type: string }
+                  description: { type: string }
+            projects:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  role: { type: string }
+                  description: { type: string }
+            certifications:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  year: { type: string }
+            languages:
+              type: array
+              items:
+                type: object
+                properties:
+                  language: { type: string }
+                  level: { type: string }
+
+    # ── Profile ──────────────────────────────────────────────
+    UpdateEmployeeProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: "Nguyễn Văn A"
+        about:
+          type: string
+          maxLength: 2000
+        profile_pic:
+          type: string
+          format: binary
+          description: Ảnh đại diện (JPG/PNG/WebP, tối đa 2MB)
+        skills:
+          type: array
+          items:
+            type: string
+          example: ["PHP", "Laravel", "Vue.js"]
+        experience_years:
+          type: integer
+          minimum: 0
+          maximum: 50
+          example: 3
+        desired_salary:
+          type: integer
+          minimum: 0
+          example: 20000000
+        location:
+          type: string
+          maxLength: 255
+          example: "Hà Nội"
+        job_type_pref:
+          type: string
+          enum: [full-time, part-time, remote, freelance]
+          example: remote
+
+    UpdateEmployerProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: "Trần Thị B"
+        about:
+          type: string
+          maxLength: 2000
+        profile_pic:
+          type: string
+          format: binary
+          description: Ảnh đại diện (JPG/PNG/WebP, tối đa 2MB)
+        company_name:
+          type: string
+          maxLength: 255
+          example: "Công ty TNHH ABC"
+        company_logo:
+          type: string
+          format: binary
+          description: Logo công ty (JPG/PNG/WebP, tối đa 2MB)
+        company_website:
+          type: string
+          format: uri
+          example: "https://abc.com"
+        company_size:
+          type: string
+          enum: ["1-10", "11-50", "51-200", "201-500", "500+"]
+          example: "11-50"
+
+    UpdatePasswordRequest:
+      type: object
+      required: [password, password_confirmation]
+      properties:
+        current_password:
+          type: string
+          format: password
+          description: Bắt buộc nếu tài khoản đăng ký thường (không cần nếu OAuth chưa có password)
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "newpassword123"
+        password_confirmation:
+          type: string
+          format: password
+          example: "newpassword123"
+
+    NotificationSettingsRequest:
+      type: object
+      properties:
+        mail:
+          type: boolean
+          example: true
+          description: Nhận email thông báo chung
+        notify_shortlist:
+          type: boolean
+          example: true
+          description: Thông báo khi được shortlist
+        notify_app_status:
+          type: boolean
+          example: true
+          description: Thông báo khi trạng thái hồ sơ thay đổi
+        notify_job_alert:
+          type: boolean
+          example: false
+          description: Thông báo việc làm mới phù hợp
+
+    # ── Notifications ─────────────────────────────────────────
+    NotificationsResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        unread_count:
+          type: integer
+          example: 3
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 15
+        user_id:
+          type: integer
+          example: 42
+        title:
+          type: string
+          example: "Hồ sơ của bạn đã được xem"
+        message:
+          type: string
+          example: "Nhà tuyển dụng ABC đã xem hồ sơ của bạn."
+        type:
+          type: string
+          example: "app_status"
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-06-07T10:00:00Z"
+
+    # ── Payment ──────────────────────────────────────────────
+    VnpayIpnRequest:
+      type: object
+      description: Parameters do VNPay gửi về (server-to-server)
+      properties:
+        vnp_TxnRef:
+          type: string
+        vnp_ResponseCode:
+          type: string
+          example: "00"
+        vnp_Amount:
+          type: string
+          example: "5000000"
+        vnp_BankCode:
+          type: string
+        vnp_TransactionNo:
+          type: string
+        vnp_SecureHash:
+          type: string
+        vnp_OrderInfo:
+          type: string
+
+    VnpayIpnResponse:
+      type: object
+      properties:
+        RspCode:
+          type: string
+          example: "00"
+          description: "00 = thành công, 99 = thất bại"
+        Message:
+          type: string
+          example: "Confirm Success"
+
+    # ── Admin ─────────────────────────────────────────────────
+    AdminUserDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        user_type:
+          type: string
+          enum: [employee, employer, admin]
+        plan:
+          type: string
+          enum: [free, trial, premium]
+        is_banned:
+          type: boolean
+        email_verified:
+          type: boolean
+        created_at:
+          type: string
+          example: "07/06/2026 10:00"
+        billing_ends:
+          type: string
+          nullable: true
+          example: "07/07/2026"
+        about:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        experience_years:
+          type: integer
+          nullable: true
+        desired_salary:
+          type: integer
+          nullable: true
+        company_name:
+          type: string
+          nullable: true
+        company_website:
+          type: string
+          nullable: true
+        company_size:
+          type: string
+          nullable: true
+        listings_count:
+          type: integer
+        applications_count:
+          type: integer
+        avatar_url:
+          type: string
+          example: "https://ui-avatars.com/api/?name=Nguyen+Van+A&background=10b981&color=fff"
+
+    AdminJobDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        slug:
+          type: string
+        predes:
+          type: string
+          nullable: true
+        description:
+          type: string
+        job_type:
+          type: string
+        address:
+          type: string
+        salary:
+          type: integer
+        status:
+          type: string
+          enum: [pending, open, hidden, closed]
+        application_close_date:
+          type: string
+          nullable: true
+        applicants_count:
+          type: integer
+        created_at:
+          type: string
+        employer:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            email: { type: string }
+            company_name: { type: string }
+            avatar_url: { type: string }
+
+    # ── Common ────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Mô tả lỗi cụ thể"
