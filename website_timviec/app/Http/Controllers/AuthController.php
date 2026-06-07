@@ -75,7 +75,8 @@ class AuthController extends Controller
             Auth::login($user);
 
             return redirect()->route('dashboard')
-                ->with('success', 'Đăng ký tài khoản nhà tuyển dụng thành công!');
+                ->with('success', 'Đăng ký tài khoản nhà tuyển dụng thành công!')
+                ->with('show_welcome_modal', true);
 
         } catch (\Throwable $e) {
             Log::error('Register employer failed: ' . $e->getMessage());

@@ -122,4 +122,37 @@ class User extends Authenticatable
     {
         return $this->user_type === 'employer';
     }
+
+    // ─── Premium Helpers ───────────────────────────────────────────────────
+
+    public function activeSubscription()
+    {
+        return $this->subscriptions()
+            ->where('status', 'active')
+            ->where('billing_ends', '>', now())
+            ->latest('billing_ends');
+    }
+
+    /**
+     * Kiểm tra employer có đang trong gói Premium không.
+     * Source of truth: bảng subscriptions (KHÔNG dùng billing_ends trên users).
+     */
+    public function isPremium(): bool
+    {
+        return $this->subscriptions()
+            ->where('status', 'active')
+            ->where('billing_ends', '>', now())
+            ->exists();
+    }
+
+    /**
+     * Đếm số bài đã đăng trong tháng hiện tại.
+     */
+    public function monthlyPostCount(): int
+    {
+        return $this->listings()
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->count();
+    }
 }

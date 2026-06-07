@@ -9,12 +9,14 @@ use Illuminate\Support\Facades\Log;
 
 class SendApplicationStatusEmail
 {
-    /** Chỉ gửi email với các trạng thái quan trọng */
-    private const NOTIFY_STATUSES = ['interviewing', 'accepted', 'rejected'];
-
+    /**
+     * Gửi email khi status = 'interviewing' HOẶC 'rejected'.
+     */
     public function handle(ApplicationStatusUpdated $event): void
     {
-        if (!in_array($event->application->status, self::NOTIFY_STATUSES)) {
+        $emailStatuses = ['interviewing', 'rejected'];
+
+        if (!in_array($event->application->status, $emailStatuses)) {
             return;
         }
 
@@ -23,8 +25,10 @@ class SendApplicationStatusEmail
         try {
             Mail::to($candidate->email)
                 ->send(new ApplicationStatusMail($event->application, $event->oldStatus));
+
+            Log::info("Status email [{$event->application->status}] sent to {$candidate->email} for application #{$event->application->id}");
         } catch (\Throwable $e) {
-            Log::error("SendApplicationStatusEmail: Gửi mail thất bại cho user {$candidate->id}: " . $e->getMessage());
+            Log::error("SendApplicationStatusEmail failed for user {$candidate->id}: " . $e->getMessage());
         }
     }
 }

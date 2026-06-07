@@ -732,6 +732,12 @@ class DatabaseSeeder extends Seeder
         $this->command->info("✅ Seeded: " . count($skills) . " skills, " . count($employers) . " employers, {$count} active listings.");
         $this->command->info("📌 2 listings đã đóng/hết hạn được tạo thêm để test Active_Listing filter.");
         $this->command->info("🚀 Truy cập: GET /api/listings/search để bắt đầu kiểm tra.");
+
+        $this->call([
+            CategorySeeder::class,
+            SkillSeeder::class,
+            BannedKeywordSeeder::class,
+        ]);
     }
 
     private function fakeDescription(): string

@@ -9,19 +9,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Skill extends Model
 {
     use HasFactory;
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+
     protected $fillable = [
         'name',
         'slug',
+        'usage_count',
     ];
 
-    /**
-     * The listings that have this skill.
-     */
+    protected $casts = [
+        'usage_count' => 'integer',
+    ];
+
     public function listings(): BelongsToMany
     {
         return $this->belongsToMany(Listing::class, 'listing_skill');

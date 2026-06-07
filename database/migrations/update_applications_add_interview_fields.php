@@ -1,0 +1,32 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('applications', function (Blueprint $table) {
+            // Thêm cột ngày giờ phỏng vấn (chỉ có khi status = interviewing)
+            $table->timestamp('interview_scheduled_at')->nullable()->after('status_updated_at');
+
+            // Đổi enum để thêm trạng thái 'approved' (Duyệt hồ sơ)
+            // MySQL: cần dùng raw SQL để modify enum
+        });
+
+        // MySQL modify enum - add 'approved' status
+        \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM(
+            'submitted','viewed','approved','interviewing','rejected'
+        ) NOT NULL DEFAULT 'submitted'");
+    }
+
+    public function down(): void
+    {
+        Schema::table('applications', function (Blueprint $table) {
+            $table->dropColumn('interview_scheduled_at');
+        });
+        \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM(
+            'submitted','viewed','interviewing','accepted','rejected'
+        ) NOT NULL DEFAULT 'submitted'");
+    }
+};

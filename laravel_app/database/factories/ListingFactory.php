@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Category;
 use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -20,6 +21,7 @@ class ListingFactory extends Factory
 
         return [
             'user_id'                => User::factory()->employer(),
+            'category_id'            => Category::factory(),
             'title'                  => $title,
             'slug'                   => Str::slug($title) . '-' . fake()->unique()->numerify('####'),
             'predes'                 => fake()->optional(0.8)->sentence(20),
@@ -31,10 +33,18 @@ class ListingFactory extends Factory
             'experience_years_min'   => null,
             'experience_years_max'   => null,
             'job_level'              => null,
+            'level'                  => fake()->randomElement(['intern', 'junior', 'middle', 'senior', 'manager', 'director']),
             'address'                => fake()->city() . ', ' . fake()->country(),
             'salary'                 => fake()->randomElement([0, 5000000, 10000000, 15000000, 20000000, 30000000]),
-            'feature_image'          => null,
+            'salary_min'             => 10000000,
+            'salary_max'             => 20000000,
+            'is_negotiable'          => false,
+            'hide_salary'            => false,
             'application_close_date' => fake()->dateTimeBetween('+1 day', '+6 months')->format('Y-m-d'),
+            'vacancy_count'          => 1,
+            'contact_email'          => fake()->companyEmail(),
+            'contact_phone'          => '0987654321',
+            'publish_mode'           => 'immediate',
             'status'                 => 'open',
         ];
     }
