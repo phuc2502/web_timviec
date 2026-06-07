@@ -83,20 +83,22 @@ class MessageController extends Controller
             abort(403, 'Bạn không có quyền truy cập cuộc hội thoại này.');
         }
 
-        // Khôi phục hội thoại cho người dùng khi họ xem trực tiếp
-        if ($conversation->employer_id === $userId) {
-            if ($conversation->employer_deleted_at !== null) {
-                $conversation->employer_deleted_at = null;
-                $conversation->save();
-            }
-        } else {
-            if ($conversation->employee_deleted_at !== null) {
-                $conversation->employee_deleted_at = null;
-                $conversation->save();
+        $tab = request()->query('tab', 'active');
+
+        // Khôi phục hội thoại cho người dùng khi họ xem trực tiếp (ngoại trừ khi họ đang xem ở mục Đã ẩn)
+        if ($tab !== 'archive') {
+            if ($conversation->employer_id === $userId) {
+                if ($conversation->employer_deleted_at !== null) {
+                    $conversation->employer_deleted_at = null;
+                    $conversation->save();
+                }
+            } else {
+                if ($conversation->employee_deleted_at !== null) {
+                    $conversation->employee_deleted_at = null;
+                    $conversation->save();
+                }
             }
         }
-
-        $tab = request()->query('tab', 'active');
 
         if ($tab === 'archive') {
             $conversations = Conversation::forUser($userId)
@@ -289,10 +291,10 @@ class MessageController extends Controller
                }
                return true;
            })->timeout(8)->post(
-               'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' . $apiKey,
+               'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $apiKey,
                [
                    'contents'         => [['parts' => [['text' => $prompt]]]],
-                   'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 300],
+                   'generationConfig' => ['temperature' => 0.1, 'maxOutputTokens' => 1024],
                ]
            );
 

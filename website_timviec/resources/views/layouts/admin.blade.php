@@ -34,6 +34,9 @@
       <a href="{{ url('/admin/transactions') }}" class="{{ request()->is('admin/transactions*') ? 'active' : '' }}">
         <i class="fas fa-credit-card fa-fw"></i> Giao dịch
       </a>
+      <a href="{{ route('admin.ai-chat.index') }}" class="{{ request()->is('admin/ai-chat*') ? 'active' : '' }}">
+        <i class="fas fa-robot fa-fw"></i> Quản lý AI Chat
+      </a>
       <div class="admin-nav__section">Hệ thống</div>
       <a href="{{ url('/') }}" target="_blank">
         <i class="fas fa-external-link-alt fa-fw"></i> Xem website

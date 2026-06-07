@@ -39,6 +39,9 @@
             $q->where('employer_id', auth()->id())->orWhere('employee_id', auth()->id())
           )->where('sender_id', '!=', auth()->id())->whereNull('read_at')->count();
         @endphp
+        <a href="{{ route('ai-chat.index') }}" class="{{ request()->is('ai-chat*') ? 'active' : '' }}">
+          <i class="fas fa-robot"></i> Trợ lý AI
+        </a>
         <a href="{{ route('messages.index') }}">
           <i class="fas fa-comment-dots"></i> Tin nhắn
           @if($unreadCount > 0)

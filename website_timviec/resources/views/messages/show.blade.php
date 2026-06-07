@@ -19,7 +19,7 @@
       @endif
     </div>
     <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
-      <input type="text" class="form-control" style="font-size:13px" placeholder="🔍 Tìm cuộc trò chuyện...">
+      <input type="text" id="search-input" class="form-control" style="font-size:13px" placeholder="🔍 Tìm cuộc trò chuyện...">
     </div>
     <div style="flex:1;overflow-y:auto">
       @foreach($conversations ?? [] as $conv)
@@ -27,7 +27,9 @@
           $cOther = auth()->user()->user_type === 'employer' ? $conv->employee : $conv->employer; 
           $cOnline = $cOther ? $cOther->isOnline() : false;
         @endphp
-        <div style="position:relative; display:flex; align-items:center; width:100%">
+        <div class="conversation-wrapper" 
+             data-search="{{ Str::lower(($cOther->name ?? '') . ' ' . ($conv->messages->last() ? $conv->messages->last()->body : '') . ' ' . ($conv->listing ? $conv->listing->title : '')) }}"
+             style="position:relative; display:flex; align-items:center; width:100%">
           <a href="{{ url('/messages/'.$conv->id.(isset($tab) && $tab === 'archive' ? '?tab=archive' : '')) }}" class="conversation-item {{ $conversation->id == $conv->id ? 'active' : '' }}" style="text-decoration:none; flex:1">
             <div style="position:relative; flex-shrink:0;">
               <div class="avatar avatar-md avatar-placeholder" style="background:var(--primary-light);color:var(--primary);font-size:16px;font-weight:700">
@@ -102,13 +104,22 @@
             <i class="fas fa-external-link-alt"></i> Xem tin
           </a>
         @endif
-        <form action="{{ route('messages.destroy', $conversation->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đoạn chat này không? Toàn bộ lịch sử trò chuyện của bạn sẽ bị ẩn.')" style="margin:0">
-          @csrf
-          @method('DELETE')
-          <button type="submit" class="btn btn-outline-danger btn-sm">
-            <i class="fas fa-trash-alt"></i> Xóa đoạn chat
-          </button>
-        </form>
+        @if(isset($tab) && $tab === 'archive')
+          <form action="{{ route('messages.restore', $conversation->id) }}" method="POST" style="margin:0">
+            @csrf
+            <button type="submit" class="btn btn-outline-success btn-sm" style="display:flex;align-items:center;gap:6px">
+              <i class="fas fa-undo"></i> Khôi phục đoạn chat
+            </button>
+          </form>
+        @else
+          <form action="{{ route('messages.destroy', $conversation->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đoạn chat này không? Toàn bộ lịch sử trò chuyện của bạn sẽ bị ẩn.')" style="margin:0">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-trash-alt"></i> Xóa đoạn chat
+            </button>
+          </form>
+        @endif
       </div>
     </div>
 
@@ -203,42 +214,53 @@
       </div>
     </div>
 
-    {{-- Input --}}
     <div class="chat-input" style="position: relative;">
-      <form action="{{ url('/messages/'.$conversation->id.'/send') }}" method="POST" enctype="multipart/form-data" style="display:flex;gap:10px;width:100%;align-items:flex-end" id="msg-form">
-        @csrf
-        
-        {{-- Attachment Inputs --}}
-        <input type="file" name="file" id="file-input" style="display:none" onchange="handleFileSelect(this)">
-        
-        {{-- Buttons Group --}}
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px">
-          {{-- Attach File Icon --}}
-          <button type="button" class="btn" onclick="document.getElementById('file-input').click()" style="height:40px;width:40px;padding:0;background:var(--bg-light);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center" title="Đính kèm tài liệu/CV">
-            <i class="fas fa-paperclip" style="color:var(--text-muted)"></i>
-          </button>
-
-          {{-- Quick Replies Icon --}}
-          <button type="button" class="btn" onclick="toggleQuickReplies()" style="height:40px;width:40px;padding:0;background:var(--bg-light);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center" title="Tin nhắn mẫu nhanh">
-            <i class="fas fa-comment-dots" style="color:var(--text-muted)"></i>
-          </button>
-
-          {{-- Schedule Interview Icon (Only Employer) --}}
-          @if(auth()->user()->isEmployer())
-            <button type="button" class="btn" onclick="openInterviewModal()" style="height:40px;width:40px;padding:0;background:var(--bg-light);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center" title="Lên lịch phỏng vấn">
-              <i class="fas fa-calendar-plus" style="color:var(--text-muted)"></i>
+      @if(isset($tab) && $tab === 'archive')
+        <div style="width:100%; text-align:center; padding:16px 20px; background:#fff3cd; border-top:1px solid #ffeeba; color:#856404; font-size:13.5px; border-radius:0 0 var(--radius-lg) var(--radius-lg); display:flex; align-items:center; justify-content:center; gap:12px; box-shadow:inset 0 1px 0 rgba(0,0,0,0.05)">
+          <span><i class="fas fa-archive"></i> Cuộc trò chuyện này đang nằm trong thư mục ẩn.</span>
+          <form action="{{ route('messages.restore', $conversation->id) }}" method="POST" style="margin:0; display:inline">
+            @csrf
+            <button type="submit" class="btn btn-success btn-sm" style="font-weight:700; font-size:12px; padding:4px 12px; border-radius:var(--radius-sm); border:none; background:#28a745; color:white">
+              <i class="fas fa-undo"></i> Khôi phục để nhắn tin
             </button>
-          @endif
+          </form>
         </div>
+      @else
+        <form action="{{ url('/messages/'.$conversation->id.'/send') }}" method="POST" enctype="multipart/form-data" style="display:flex;gap:10px;width:100%;align-items:flex-end" id="msg-form">
+          @csrf
+          
+          {{-- Attachment Inputs --}}
+          <input type="file" name="file" id="file-input" style="display:none" onchange="handleFileSelect(this)">
+          
+          {{-- Buttons Group --}}
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px">
+            {{-- Attach File Icon --}}
+            <button type="button" class="btn" onclick="document.getElementById('file-input').click()" style="height:40px;width:40px;padding:0;background:var(--bg-light);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center" title="Đính kèm tài liệu/CV">
+              <i class="fas fa-paperclip" style="color:var(--text-muted)"></i>
+            </button>
 
-        <textarea name="body" id="msg-input" class="form-control" placeholder="Nhập tin nhắn... (Enter để gửi)" rows="1"
-          style="flex:1;border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;font-family:inherit;font-size:14px;resize:none;max-height:120px"
-          onkeydown="handleEnter(event)">{{ old('body') }}</textarea>
+            {{-- Quick Replies Icon --}}
+            <button type="button" class="btn" onclick="toggleQuickReplies()" style="height:40px;width:40px;padding:0;background:var(--bg-light);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center" title="Tin nhắn mẫu nhanh">
+              <i class="fas fa-comment-dots" style="color:var(--text-muted)"></i>
+            </button>
 
-        <button type="submit" class="btn btn-primary" style="flex-shrink:0;height:44px;width:44px;padding:0;justify-content:center;border-radius:50%">
-          <i class="fas fa-paper-plane"></i>
-        </button>
-      </form>
+            {{-- Schedule Interview Icon (Only Employer) --}}
+            @if(auth()->user()->isEmployer())
+              <button type="button" class="btn" onclick="openInterviewModal()" style="height:40px;width:40px;padding:0;background:var(--bg-light);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center" title="Lên lịch phỏng vấn">
+                <i class="fas fa-calendar-plus" style="color:var(--text-muted)"></i>
+              </button>
+            @endif
+          </div>
+
+          <textarea name="body" id="msg-input" class="form-control" placeholder="Nhập tin nhắn... (Enter để gửi)" rows="1"
+            style="flex:1;border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;font-family:inherit;font-size:14px;resize:none;max-height:120px"
+            onkeydown="handleEnter(event)">{{ old('body') }}</textarea>
+
+          <button type="submit" class="btn btn-primary" style="flex-shrink:0;height:44px;width:44px;padding:0;justify-content:center;border-radius:50%">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
+      @endif
     </div>
   </div>
 </div>
@@ -280,6 +302,23 @@
 // Scroll to bottom
 var container = document.getElementById('messages-container');
 if (container) container.scrollTop = container.scrollHeight;
+
+// Tìm kiếm cuộc trò chuyện ở sidebar (Client-side)
+var searchInput = document.getElementById('search-input');
+var wrappers = document.querySelectorAll('.conversation-wrapper');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    var query = this.value.trim().toLowerCase();
+    wrappers.forEach(function(wrapper) {
+      var searchText = wrapper.getAttribute('data-search') || '';
+      if (searchText.indexOf(query) !== -1) {
+        wrapper.style.setProperty('display', 'flex', 'important');
+      } else {
+        wrapper.style.setProperty('display', 'none', 'important');
+      }
+    });
+  });
+}
 
 // Enter to send
 function handleEnter(e) {

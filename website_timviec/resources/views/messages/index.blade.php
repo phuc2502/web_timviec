@@ -19,7 +19,7 @@
       @endif
     </div>
     <div class="chat-search" style="padding:10px 14px">
-      <input type="text" class="form-control" style="font-size:13px" placeholder="🔍 Tìm cuộc trò chuyện...">
+      <input type="text" id="search-input" class="form-control" style="font-size:13px" placeholder="🔍 Tìm cuộc trò chuyện...">
     </div>
     <div style="flex:1;overflow-y:auto">
       @forelse($conversations ?? [] as $conv)
@@ -27,7 +27,9 @@
           $other = auth()->user()->user_type === 'employer' ? $conv->employee : $conv->employer;
           $lastMsg = $conv->messages->last();
         @endphp
-        <div style="position:relative; display:flex; align-items:center; width:100%">
+        <div class="conversation-wrapper" 
+             data-search="{{ Str::lower(($other->name ?? '') . ' ' . ($lastMsg ? $lastMsg->body : '') . ' ' . ($conv->listing ? $conv->listing->title : '')) }}"
+             style="position:relative; display:flex; align-items:center; width:100%">
           <a href="{{ url('/messages/'.$conv->id.(isset($tab) && $tab === 'archive' ? '?tab=archive' : '')) }}" class="conversation-item {{ isset($current) && $current->id == $conv->id ? 'active' : '' }}" style="text-decoration:none; flex:1">
             <div class="avatar avatar-md avatar-placeholder" style="background:var(--primary-light);color:var(--primary);font-size:16px;font-weight:700;flex-shrink:0">
               {{ strtoupper(substr($other->name ?? 'U', 0, 1)) }}
@@ -74,3 +76,24 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+// Tìm kiếm cuộc trò chuyện ở sidebar (Client-side)
+var searchInput = document.getElementById('search-input');
+var wrappers = document.querySelectorAll('.conversation-wrapper');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    var query = this.value.trim().toLowerCase();
+    wrappers.forEach(function(wrapper) {
+      var searchText = wrapper.getAttribute('data-search') || '';
+      if (searchText.indexOf(query) !== -1) {
+        wrapper.style.setProperty('display', 'flex', 'important');
+      } else {
+        wrapper.style.setProperty('display', 'none', 'important');
+      }
+    });
+  });
+}
+</script>
+@endpush

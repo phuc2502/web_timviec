@@ -26,5 +26,10 @@ class AppServiceProvider extends ServiceProvider
         // ── Event → Listener ──────────────────────────────────────────────
         Event::listen(ApplicationStatusUpdated::class, SendApplicationStatusEmail::class);
         Event::listen(PaymentSucceeded::class,          SendPaymentConfirmationEmail::class);
+
+        // ── Gate ──────────────────────────────────────────────────────────
+        \Illuminate\Support\Facades\Gate::define('admin', function (User $user) {
+            return $user->user_type === 'admin';
+        });
     }
 }

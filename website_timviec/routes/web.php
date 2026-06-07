@@ -11,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AiChatController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Helper: Mock User ─────────────────────────────────────────────────────
@@ -330,6 +331,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/messages/interviews/{id}/respond', [\App\Http\Controllers\MessageController::class, 'respondToInterview'])->name('messages.interview.respond');
     Route::get('/messages/quick-replies/list',       [\App\Http\Controllers\MessageController::class, 'getQuickReplies'])->name('messages.quick_replies');
 
+    // AI Chat
+    Route::get('/ai-chat',            [AiChatController::class, 'index'])->name('ai-chat.index');
+    Route::post('/ai-chat/new',       [AiChatController::class, 'create'])->name('ai-chat.create');
+    Route::get('/ai-chat/{id}',       [AiChatController::class, 'show'])->name('ai-chat.show');
+    Route::post('/ai-chat/{id}/send', [AiChatController::class, 'send'])->name('ai-chat.send');
+    Route::delete('/ai-chat/{id}',    [AiChatController::class, 'destroy'])->name('ai-chat.destroy');
+
     // ─── JOB MANAGEMENT — Employer ─────────────────────────────────────────
     Route::middleware('employer')->group(function () {
         Route::get('/job/create',        [JobController::class, 'create'])->name('job.create');
@@ -386,6 +394,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/permissions/transfer/{id}',[AdminController::class, 'transferOwnership'])->name('permissions.transfer');
         Route::get('/jobs',                      [AdminController::class, 'jobs'])->name('jobs');
         Route::delete('/jobs/{id}',              [AdminController::class, 'deleteJob'])->name('jobs.delete');
+
+        // Admin AI Chat management
+        Route::get('/ai-chat',                   [AdminController::class, 'aiConversations'])->name('ai-chat.index');
+        Route::get('/ai-chat/{id}',              [AdminController::class, 'showAiConversation'])->name('ai-chat.show');
+        Route::delete('/ai-chat/{id}',           [AdminController::class, 'deleteAiConversation'])->name('ai-chat.destroy');
     });
 });
 

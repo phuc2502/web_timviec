@@ -220,6 +220,7 @@ class JobController extends Controller
         // Kiểm tra ứng viên đã nộp đơn chưa
         $existingApplication = null;
         $applyCount          = 0;
+        $isStatusLocked      = false;
         if (auth()->check() && auth()->user()->user_type === 'employee') {
             $allApps = \App\Models\Application::where('user_id', auth()->id())
                 ->where('listing_id', $listing->id)

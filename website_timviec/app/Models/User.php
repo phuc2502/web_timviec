@@ -155,4 +155,12 @@ class User extends Authenticatable
             ->whereMonth('created_at', now()->month)
             ->count();
     }
+
+    /**
+     * Get the AI conversations for the user.
+     */
+    public function aiConversations(): HasMany
+    {
+        return $this->hasMany(AiConversation::class);
+    }
 }
