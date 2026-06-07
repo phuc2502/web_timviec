@@ -1,8 +1,12 @@
 # --- Bước 1: Biên dịch Frontend Assets (Vite) ---
-FROM node:18-alpine AS node-builder
+FROM node:20-alpine AS node-builder
 WORKDIR /app
+
+# Cài đặt các thư viện hệ thống cần thiết cho native modules (tailwindcss/oxide)
+RUN apk add --no-cache python3 make g++ libc6-compat
+
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
