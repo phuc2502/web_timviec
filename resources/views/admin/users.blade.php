@@ -87,12 +87,12 @@
           <td style="text-align:center;">
             <div style="display:flex; gap:6px; justify-content:center;">
               {{-- Nút xem chi tiết --}}
-              <button onclick="openUserModal({{ $user->id }})" title="Xem chi tiết"
-                style="border:none; background:#eff6ff; color:#3b82f6; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; transition:all .15s;"
+              <a href="{{ url('/admin/users/'.$user->id) }}" title="Xem chi tiết"
+                style="border:none; background:#eff6ff; color:#3b82f6; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center;"
                 onmouseover="this.style.background='#3b82f6';this.style.color='#fff';"
                 onmouseout="this.style.background='#eff6ff';this.style.color='#3b82f6';">
                 <i class="fas fa-eye"></i>
-              </button>
+              </a>
               {{-- Nút khóa/mở --}}
               <form action="{{ url('/admin/users/'.$user->id.'/ban') }}" method="POST" style="margin:0;">
                 @csrf

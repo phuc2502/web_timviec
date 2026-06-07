@@ -204,6 +204,18 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Transactions
     Route::get('/transactions',                  [AdminController::class, 'transactions'])->name('transactions');
+
+    // Users — chi tiết & xóa
+    Route::get('/users/{id}',                    [AdminController::class, 'userShow'])->name('users.show');
+    Route::delete('/users/{id}',                 [AdminController::class, 'deleteUser'])->name('users.delete');
+    Route::post('/users/{id}/notification-settings', [AdminController::class, 'updateNotificationSettings'])->name('users.notification-settings');
+    // Notifications (admin quản lý)
+    Route::get('/notifications',                 [App\Http\Controllers\Admin\AdminNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/stats',           [App\Http\Controllers\Admin\AdminNotificationController::class, 'stats'])->name('notifications.stats');
+    Route::post('/notifications/broadcast',      [App\Http\Controllers\Admin\AdminNotificationController::class, 'broadcast'])->name('notifications.broadcast');
+    Route::delete('/notifications/{id}',         [App\Http\Controllers\Admin\AdminNotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::post('/notifications/cleanup',        [App\Http\Controllers\Admin\AdminNotificationController::class, 'cleanup'])->name('notifications.cleanup');
+    Route::get('/notifications/data',            [App\Http\Controllers\Admin\AdminNotificationController::class, 'data'])->name('notifications.data');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

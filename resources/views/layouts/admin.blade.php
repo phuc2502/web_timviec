@@ -387,6 +387,24 @@
         </span>
       </a>
 
+      @php $_unreadNotifCount = \App\Models\AppNotification::whereNull('read_at')->count(); @endphp
+      <a href="{{ url('/admin/notifications') }}"
+         data-tooltip="Thông báo"
+         class="sidebar-link {{ request()->is('admin/notifications*') ? 'active' : '' }}"
+         style="position:relative;">
+        <span class="sidebar-link__icon" style="position:relative;">
+          <i class="fas fa-bell fa-fw"></i>
+          @if($_unreadNotifCount > 0)
+            <span style="position:absolute;top:-6px;right:-8px;min-width:16px;height:16px;padding:0 4px;background:#f59e0b;color:#fff;border-radius:8px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;">{{ $_unreadNotifCount > 99 ? '99+' : $_unreadNotifCount }}</span>
+          @endif
+        </span>
+        <span class="sidebar-link__label">Thông báo
+          @if($_unreadNotifCount > 0)
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:#f59e0b;color:#fff;border-radius:9px;font-size:10px;font-weight:700;margin-left:6px;">{{ $_unreadNotifCount > 99 ? '99+' : $_unreadNotifCount }}</span>
+          @endif
+        </span>
+      </a>
+
       <div class="sidebar-section">Hệ thống</div>
 
       <a href="{{ url('/') }}"

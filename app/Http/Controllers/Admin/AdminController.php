@@ -114,7 +114,63 @@ class AdminController extends Controller
     }
 
     /**
-     * DELETE /admin/users/{id} — Xóa tài khoản user
+
+    /**
+     * GET /admin/users/{id} — Trang chi tiết tài khoản
+     */
+    public function userShow($id)
+    {
+        $user = User::with(['listings', 'applications', 'subscriptions'])
+                    ->withCount(['listings', 'applications', 'appNotifications'])
+                    ->findOrFail($id);
+
+        $recentNotifications = \App\Models\AppNotification::where('user_id', $user->id)
+                                ->latest()->take(10)->get();
+        $recentApplications  = $user->applications()->with('listing')->latest()->take(5)->get();
+        $recentListings      = $user->listings()->latest()->take(5)->get();
+
+        $unreadCount  = \App\Models\AppNotification::where('user_id', $user->id)
+                          ->whereNull('read_at')->count();
+        $completeness = $user->profileCompleteness();
+
+        return view('admin.users.show', compact(
+            'user', 'recentNotifications', 'recentApplications',
+            'recentListings', 'unreadCount', 'completeness'
+        ));
+    }
+
+    /**
+     * POST /admin/users/{id}/notification-settings — Cập nhật cài đặt thông báo
+     */
+    public function updateNotificationSettings(\Illuminate\Http\Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $user->update([
+            'mail'              => $request->boolean('mail'),
+            'notify_shortlist'  => $request->boolean('notify_shortlist'),
+            'notify_app_status' => $request->boolean('notify_app_status'),
+            'notify_job_alert'  => $request->boolean('notify_job_alert'),
+        ]);
+        return back()->with('success', "Đã cập nhật cài đặt thông báo cho {$user->name}.");
+    }
+
+    /**
+     * DELETE /admin/users/{id} — Xóa tài khoản user (redirect to list)
+     */
+    public function deleteUserAndRedirect($id)
+    {
+        $user = User::findOrFail($id);
+        if ($user->user_type === 'admin' || $user->is_admin) {
+            return back()->with('error', 'Không thể xóa tài khoản Admin.');
+        }
+        $name = $user->name;
+        $user->delete();
+        Log::info("Admin deleted user ID {$id} ({$name})");
+        return redirect()->route('admin.users')->with('success', "Đã xóa tài khoản của {$name} khỏi hệ thống.");
+    }
+
+    /**
+     * DELETE /admin/users/{id} — Xóa tài khoản user (back)
      */
     public function deleteUser($id)
     {

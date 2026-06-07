@@ -27,7 +27,7 @@
 
     {{-- Footer --}}
     <div style="padding:10px 16px;border-top:1px solid var(--border);text-align:center">
-      <a href="{{ route('notifications.index') }}?full=1" style="font-size:13px;color:var(--primary);font-weight:600">Xem tất cả thông báo</a>
+      <a href="{{ route('notifications.index') }}" style="font-size:13px;color:var(--primary);font-weight:600">Xem tất cả thông báo</a>
     </div>
   </div>
 </div>
