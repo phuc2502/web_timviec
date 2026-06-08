@@ -1,30 +1,97 @@
-@component('mail::message')
-# Đặt lại mật khẩu
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đặt lại mật khẩu — ITWorks</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,0.08);">
 
-Xin chào **{{ $notifiable->name }}**,
+          {{-- Header --}}
+          <tr>
+            <td style="background:linear-gradient(135deg,#00D97E,#00B368);padding:36px 40px;text-align:center;">
+              <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:16px;padding:10px 24px;margin-bottom:16px;">
+                <span style="color:#ffffff;font-size:26px;font-weight:800;letter-spacing:-0.5px;">
+                  IT<span style="color:#d1fae5;">Works</span>
+                </span>
+              </div>
+              <p style="margin:0;color:rgba(255,255,255,0.85);font-size:14px;">Nền tảng tuyển dụng IT hàng đầu Việt Nam</p>
+            </td>
+          </tr>
 
-Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản ITWorks liên kết với địa chỉ email này.
+          {{-- Icon --}}
+          <tr>
+            <td style="text-align:center;padding:36px 40px 0;">
+              <div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;background:#fff7ed;border-radius:50%;margin-bottom:24px;">
+                <span style="font-size:32px;">🔑</span>
+              </div>
+              <h2 style="margin:0 0 12px;color:#0f172a;font-size:22px;font-weight:800;">
+                Đặt lại mật khẩu
+              </h2>
+              <p style="margin:0;color:#64748b;font-size:15px;line-height:1.6;">
+                Xin chào <strong style="color:#0f172a;">{{ $notifiable->name }}</strong>,
+              </p>
+            </td>
+          </tr>
 
-Nhấn vào nút bên dưới để tạo mật khẩu mới:
+          {{-- Body --}}
+          <tr>
+            <td style="padding:20px 40px 32px;">
+              <p style="margin:0 0 28px;color:#475569;font-size:15px;line-height:1.7;text-align:center;">
+                Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản <strong style="color:#00B368;">ITWorks</strong> của bạn.<br>
+                Nhấn vào nút bên dưới để tạo mật khẩu mới.
+              </p>
 
-@component('mail::button', ['url' => $resetUrl, 'color' => 'success'])
-🔑 Đặt lại mật khẩu
-@endcomponent
+              {{-- CTA Button --}}
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
+                <tr>
+                  <td style="background:#00D97E;border-radius:12px;box-shadow:0 4px 16px rgba(0,217,126,0.4);">
+                    <a href="{{ $resetUrl }}"
+                       style="display:inline-block;padding:16px 48px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.3px;">
+                      🔑 Đặt lại mật khẩu
+                    </a>
+                  </td>
+                </tr>
+              </table>
 
-**Lưu ý:** Link này sẽ hết hạn sau **60 phút**.
+              {{-- Warning box --}}
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px 20px;">
+                    <p style="margin:0;color:#92400e;font-size:13px;line-height:1.6;">
+                      ⏰ <strong>Link có hiệu lực trong 5 phút.</strong> Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này — tài khoản của bạn vẫn an toàn.
+                    </p>
+                  </td>
+                </tr>
+              </table>
 
-Nếu bạn **không** yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.
+              {{-- Fallback URL --}}
+              <p style="margin:0 0 6px;color:#94a3b8;font-size:13px;">Nếu nút không hoạt động, copy đường link sau vào trình duyệt:</p>
+              <p style="margin:0;word-break:break-all;">
+                <a href="{{ $resetUrl }}" style="color:#00B368;font-size:12px;">{{ $resetUrl }}</a>
+              </p>
+            </td>
+          </tr>
 
----
+          {{-- Footer --}}
+          <tr>
+            <td style="background:#f8fafc;border-top:1px solid #f1f5f9;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 6px;color:#94a3b8;font-size:12px;">
+                © {{ date('Y') }} <strong>ITWorks</strong> — Nền tảng tuyển dụng IT hàng đầu Việt Nam
+              </p>
+              <p style="margin:0;color:#cbd5e1;font-size:11px;">
+                Email này được gửi tự động, vui lòng không trả lời.
+              </p>
+            </td>
+          </tr>
 
-Nếu nút không hoạt động, hãy sao chép đường dẫn sau vào trình duyệt:
-
-`{{ $resetUrl }}`
-
-Trân trọng,
-**Đội ngũ ITWorks**
-
-@component('mail::subcopy')
-Yêu cầu đặt lại mật khẩu được gửi từ địa chỉ IP: {{ request()->ip() }}
-@endcomponent
-@endcomponent
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
