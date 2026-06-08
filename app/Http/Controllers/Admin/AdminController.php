@@ -44,7 +44,9 @@ class AdminController extends Controller
             }
         }
 
-        $users = $query->latest()->paginate(15)->withQueryString();
+        $users = $query->with(['subscriptions' => function ($q) {
+            $q->where('status', 'active')->where('billing_ends', '>', now())->latest('billing_ends');
+        }])->latest()->paginate(15)->withQueryString();
 
         return view('admin.users', compact('users'));
     }
