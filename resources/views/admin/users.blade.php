@@ -36,7 +36,6 @@
         <th style="width:50px;">ID</th>
         <th>Họ tên & Email</th>
         <th style="width:170px;">Vai trò</th>
-        <th>Xác minh</th>
         <th style="width:170px;">Gói dịch vụ</th>
         <th>Ngày tham gia</th>
         <th style="text-align:center; width:120px;">Thao tác</th>
@@ -67,21 +66,22 @@
               $roleMap = ['employee'=>['label'=>'👤 Ứng viên','bg'=>'#eff6ff','color'=>'#3b82f6'],'employer'=>['label'=>'🏢 Doanh nghiệp','bg'=>'#fff7ed','color'=>'#c2410c'],'admin'=>['label'=>'🔑 Admin','bg'=>'#f5f3ff','color'=>'#7c3aed']];
               $r = $roleMap[$user->user_type] ?? ['label'=>$user->user_type,'bg'=>'#f1f5f9','color'=>'#475569'];
             @endphp
-            <span style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:5px; background:{{$r['bg']}}; color:{{$r['color']}}">{{ $r['label'] }}</span>
+            <span style="display:inline-block; width:120px; text-align:center; font-size:11px; font-weight:600; padding:3px 10px; border-radius:5px; background:{{$r['bg']}}; color:{{$r['color']}}; white-space:nowrap;">{{ $r['label'] }}</span>
           </td>
-          <td>
-            @if($user->email_verified_at)
-              <span style="font-size:11px; font-weight:600; background:#ecfdf5; color:#10b981; border:1px solid #d1fae5; padding:2px 8px; border-radius:4px;">Đã xác minh</span>
-            @else
-              <span style="font-size:11px; font-weight:600; background:#fffbeb; color:#d97706; border:1px solid #fef3c7; padding:2px 8px; border-radius:4px;">Chờ xác minh</span>
-            @endif
-          </td>
+
           <td>
             @php
-              $planMap = ['free'=>['label'=>'Mặc định (Free)','bg'=>'#f1f5f9','color'=>'#475569'],'trial'=>['label'=>'Dùng thử','bg'=>'#fffbeb','color'=>'#d97706'],'premium'=>['label'=>'👑 Premium','bg'=>'#fdf4ff','color'=>'#9333ea']];
-              $p = $planMap[$user->plan ?? 'free'] ?? ['label'=>'Mặc định (Free)','bg'=>'#f1f5f9','color'=>'#475569'];
+              $activeSub = $user->subscriptions->first();
+              $planKey   = $activeSub ? $activeSub->plan : 'free';
+              $planMap   = [
+                'free'    => ['label' => 'Mặc định (Free)', 'bg' => '#f1f5f9', 'color' => '#475569'],
+                'monthly' => ['label' => '👑 Premium',      'bg' => '#fdf4ff', 'color' => '#9333ea'],
+                'yearly'  => ['label' => '👑 Premium/Năm',  'bg' => '#fdf4ff', 'color' => '#9333ea'],
+                'trial'   => ['label' => 'Dùng thử',        'bg' => '#fffbeb', 'color' => '#d97706'],
+              ];
+              $p = $planMap[$planKey] ?? $planMap['free'];
             @endphp
-            <span style="font-size:11px; font-weight:600; padding:3px 10px; border-radius:5px; background:{{$p['bg']}}; color:{{$p['color']}}">{{ $p['label'] }}</span>
+            <span style="display:inline-block; width:130px; text-align:center; font-size:11px; font-weight:600; padding:3px 10px; border-radius:5px; background:{{$p['bg']}}; color:{{$p['color']}}; white-space:nowrap;">{{ $p['label'] }}</span>
           </td>
           <td class="text-muted fs-12">{{ $user->created_at->format('d/m/Y') }}</td>
           <td style="text-align:center;">
