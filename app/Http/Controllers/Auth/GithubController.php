@@ -35,6 +35,12 @@ class GithubController extends Controller
             $githubUser = Socialite::driver('github')->user();
         } catch (\Exception $e) {
             Log::error('GitHub OAuth callback error: ' . $e->getMessage());
+            
+            // CHỐT CHẶN KHỬ LOOP 429: 
+            // Nếu bị lỗi kết nối với GitHub (lệch State CSRF hoặc GitHub chặn IP cũ),
+            // hiển thị lỗi trực tiếp ra màn hình để debug, chặn không cho tự động redirect về trang login để tạo vòng lặp.
+            dd('Ứng dụng tạm dừng để chống vòng lặp 429. Chi tiết lỗi từ GitHub/Socialite: ' . $e->getMessage() . '. Hướng giải quyết: Hãy đổi sang mạng 4G từ điện thoại để lấy IP sạch rồi bấm thử lại.');
+
             return redirect()->route('login')
                 ->withErrors(['email' => 'Đăng nhập GitHub thất bại. Vui lòng thử lại.']);
         }
@@ -56,6 +62,7 @@ class GithubController extends Controller
                 return redirect()->route('login')
                     ->withErrors(['email' => 'Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.']);
             }
+            
             $user->update(array_filter([
                 'github_id'         => $user->github_id ?: $githubUser->getId(),
                 'profile_pic'       => $user->profile_pic ?: $githubUser->getAvatar(),
@@ -66,7 +73,7 @@ class GithubController extends Controller
             return $this->redirectAfterLogin($user);
         }
 
-        // User mới — lưu thông tin vào session
+        // User mới — lưu thông tin vào session để chuẩn bị đăng ký
         Session::put('social_pending', [
             'provider'   => 'github',
             'id'         => $githubUser->getId(),
@@ -75,17 +82,18 @@ class GithubController extends Controller
             'avatar'     => $githubUser->getAvatar(),
         ]);
 
-        // Nếu role đã được chọn trước (từ trang register-employee/employer), dùng luôn
+        // SỬA TẠI ĐÂY: Thay vì gọi app(GithubController::class) nội bộ làm mất luồng request,
+        // chúng ta thực hiện redirect HTTP thực sự sang chính route đăng ký kèm role
         $presetRole = Session::pull('social_preset_role');
         if ($presetRole) {
-            return app(GithubController::class)->completeRegistration($presetRole);
+            return redirect()->route('auth.github.register', ['role' => $presetRole]);
         }
 
         return redirect()->route('auth.social.choose-role', ['provider' => 'github']);
     }
 
     /**
-     * Xử lý sau khi user chọn role
+     * Xử lý sau khi user chọn role hoặc có sẵn preset role từ trước
      */
     public function completeRegistration(string $role): RedirectResponse
     {
@@ -93,11 +101,12 @@ class GithubController extends Controller
 
         if (!$pending || $pending['provider'] !== 'github') {
             return redirect()->route('login')
-                ->withErrors(['email' => 'Phiên đăng ký đã hết hạn. Vui lòng thử lại.']);
+                ->withErrors(['email' => 'Phiên đăng ký đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.']);
         }
 
         $userType = $role === 'employer' ? 'employer' : 'employee';
 
+        // Tạo tài khoản mới
         $user = User::create([
             'name'              => $pending['name'],
             'email'             => $pending['email'],
@@ -110,10 +119,11 @@ class GithubController extends Controller
 
         Session::forget('social_pending');
 
+        // Gửi email chào mừng (Bọc cẩn thận để tránh nghẽn timeout ở máy local)
         try {
             Mail::to($user->email)->send(new WelcomeMail($user));
         } catch (\Exception $e) {
-            Log::error('Gửi mail chào mừng GitHub thất bại: ' . $e->getMessage());
+            Log::error('Gửi mail chào mừng GitHub thất bại ở môi trường Local: ' . $e->getMessage());
         }
 
         Auth::login($user, true);
@@ -122,7 +132,18 @@ class GithubController extends Controller
 
     private function redirectAfterLogin(User $user): RedirectResponse
     {
-        return redirect()->intended(url('/'))
-            ->with('success', 'Chào mừng, ' . $user->name . '!');
+    // 1. BỎ dòng dd() test cũ đi để hệ thống chạy tiếp
+
+    // 2. Tự động chuyển hướng về trang chủ kèm thông báo success theo từng loại tài khoản
+    if ($user->user_type === 'employer') {
+        // Nếu là nhà tuyển dụng, đưa về trang chủ kèm thông báo dành cho Employer
+        return redirect('/')->with('success', 'Chào mừng nhà tuyển dụng, ' . $user->name . '!');
+    } elseif ($user->user_type === 'employee') {
+        // Nếu là người tìm việc, đưa về trang chủ kèm thông báo dành cho Employee
+        return redirect('/')->with('success', 'Chào mừng ứng viên, ' . $user->name . '!');
+    }
+
+    // Dự phòng nếu không khớp role nào thì cũng đưa về trang chủ luôn
+    return redirect('/')->with('success', 'Chào mừng, ' . $user->name . '!');
     }
 }
