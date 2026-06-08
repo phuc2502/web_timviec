@@ -405,6 +405,13 @@
         </span>
       </a>
 
+      <a href="{{ route('admin.ai-chat.index') }}"
+         data-tooltip="Quản lý AI Chat"
+         class="sidebar-link {{ request()->is('admin/ai-chat*') ? 'active' : '' }}">
+        <span class="sidebar-link__icon"><i class="fas fa-robot fa-fw"></i></span>
+        <span class="sidebar-link__label">Quản lý AI Chat</span>
+      </a>
+
       <div class="sidebar-section">Hệ thống</div>
 
       <a href="{{ url('/') }}"

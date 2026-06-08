@@ -37,8 +37,19 @@
           <a href="{{ route('candidate.history') }}">Việc đã nộp</a>
           <a href="{{ route('payment.token') }}">Mua lượt</a>
         @endif
-        <a href="{{ url('/messages') }}">
+        @php
+          $unreadCount = \App\Models\Message::whereHas('conversation', fn($q) =>
+            $q->where('employer_id', auth()->id())->orWhere('employee_id', auth()->id())
+          )->where('sender_id', '!=', auth()->id())->whereNull('read_at')->count();
+        @endphp
+        <a href="{{ route('ai-chat.index') }}" class="{{ request()->is('ai-chat*') ? 'active' : '' }}">
+          <i class="fas fa-robot"></i> Trợ lý AI
+        </a>
+        <a href="{{ route('messages.index') }}">
           <i class="fas fa-comment-dots"></i> Tin nhắn
+          @if($unreadCount > 0)
+            <span class="badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+          @endif
         </a>
       @else
         <a href="{{ url('/job') }}" class="{{ request()->is('job') ? 'active' : '' }}">Tìm việc</a>
@@ -197,6 +208,22 @@
 
 <style>
 @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--danger, #ff4d4f);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 5px;
+  min-width: 14px;
+  height: 14px;
+  line-height: 1;
+  margin-left: 4px;
+  vertical-align: middle;
+}
 </style>
 <script>
 function toggleDropdown() {

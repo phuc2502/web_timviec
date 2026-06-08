@@ -18,22 +18,27 @@ return new class extends Migration
         // ── Bước 1: Tìm và drop các foreign key đang dùng index unique ──
         // MySQL không cho drop unique index nếu có FK tham chiếu vào nó.
         // Cần drop FK trước, drop index, rồi tạo lại FK theo index mới (PK).
-        $fksToDrop = DB::select("
-            SELECT CONSTRAINT_NAME
-            FROM information_schema.KEY_COLUMN_USAGE
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'applications'
-              AND REFERENCED_TABLE_NAME IS NOT NULL
-              AND COLUMN_NAME IN ('user_id', 'listing_id')
-        ");
+        if (Schema::connection(null)->getConnection()->getDriverName() === 'mysql') {
+            $fksToDrop = DB::select("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'applications'
+                  AND REFERENCED_TABLE_NAME IS NOT NULL
+                  AND COLUMN_NAME IN ('user_id', 'listing_id')
+            ");
 
-        foreach ($fksToDrop as $fk) {
-            DB::statement("ALTER TABLE `applications` DROP FOREIGN KEY `{$fk->CONSTRAINT_NAME}`");
+            foreach ($fksToDrop as $fk) {
+                DB::statement("ALTER TABLE `applications` DROP FOREIGN KEY `{$fk->CONSTRAINT_NAME}`");
+            }
         }
 
         // ── Bước 2: Drop unique constraint ───────────────────────────────
         Schema::table('applications', function (Blueprint $table) {
-            $table->dropUnique(['user_id', 'listing_id']);
+            // SQLite ignores dropUnique or handles it gracefully, but to be safe on SQLite:
+            try {
+                $table->dropUnique(['user_id', 'listing_id']);
+            } catch (\Exception $e) {}
         });
 
         // ── Bước 3: Thêm cột mới ─────────────────────────────────────────
@@ -48,32 +53,34 @@ return new class extends Migration
 
         // ── Bước 4: Tạo lại foreign keys user_id & listing_id ───────────
         // (chúng đã bị drop ở bước 1, tạo lại dựa trên PK)
-        Schema::table('applications', function (Blueprint $table) {
-            // Chỉ tạo lại nếu chưa tồn tại (tránh duplicate)
-            $existing = DB::select("
-                SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = 'applications'
-                  AND COLUMN_NAME = 'user_id'
-                  AND REFERENCED_TABLE_NAME = 'users'
-            ");
-            if (empty($existing)) {
-                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-            }
-        });
+        if (Schema::connection(null)->getConnection()->getDriverName() === 'mysql') {
+            Schema::table('applications', function (Blueprint $table) {
+                // Chỉ tạo lại nếu chưa tồn tại (tránh duplicate)
+                $existing = DB::select("
+                    SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'applications'
+                      AND COLUMN_NAME = 'user_id'
+                      AND REFERENCED_TABLE_NAME = 'users'
+                ");
+                if (empty($existing)) {
+                    $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                }
+            });
 
-        Schema::table('applications', function (Blueprint $table) {
-            $existing = DB::select("
-                SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = 'applications'
-                  AND COLUMN_NAME = 'listing_id'
-                  AND REFERENCED_TABLE_NAME = 'listings'
-            ");
-            if (empty($existing)) {
-                $table->foreign('listing_id')->references('id')->on('listings')->cascadeOnDelete();
-            }
-        });
+            Schema::table('applications', function (Blueprint $table) {
+                $existing = DB::select("
+                    SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'applications'
+                      AND COLUMN_NAME = 'listing_id'
+                      AND REFERENCED_TABLE_NAME = 'listings'
+                ");
+                if (empty($existing)) {
+                    $table->foreign('listing_id')->references('id')->on('listings')->cascadeOnDelete();
+                }
+            });
+        }
 
         // ── Bước 5: Index tìm kiếm nhanh ─────────────────────────────────
         Schema::table('applications', function (Blueprint $table) {

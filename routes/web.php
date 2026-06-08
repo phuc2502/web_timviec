@@ -11,6 +11,8 @@ use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AiChatController;
+use App\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Route;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -110,6 +112,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/user/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::post('/user/mail',             [ProfileController::class, 'toggleMail'])->name('profile.toggle-mail');
     Route::post('/user/notification-settings', [ProfileController::class, 'updateNotificationSettings'])->name('profile.notification-settings');
+
+    // Messages (Candidate-Recruiter Chat)
+    Route::get('/messages',            [MessageController::class, 'index'])->name('messages.index');
+    Route::post('/messages/start',     [MessageController::class, 'findOrCreate'])->name('messages.start');
+    Route::get('/messages/{id}',       [MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{id}/send', [MessageController::class, 'store'])->name('messages.store')->middleware('throttle:30,1');
+    Route::get('/messages/{id}/poll',  [MessageController::class, 'poll'])->name('messages.poll');
+    Route::delete('/messages/{id}',    [MessageController::class, 'destroy'])->name('messages.destroy');
+    Route::post('/messages/{id}/restore', [MessageController::class, 'restore'])->name('messages.restore');
+    Route::post('/messages/interviews/{id}/respond', [MessageController::class, 'respondToInterview'])->name('messages.interview.respond');
+    Route::get('/messages/quick-replies/list',       [MessageController::class, 'getQuickReplies'])->name('messages.quick_replies');
+
+    // AI Chat
+    Route::get('/ai-chat',            [AiChatController::class, 'index'])->name('ai-chat.index');
+    Route::post('/ai-chat/new',       [AiChatController::class, 'create'])->name('ai-chat.create');
+    Route::get('/ai-chat/{id}',       [AiChatController::class, 'show'])->name('ai-chat.show');
+    Route::post('/ai-chat/{id}/send', [AiChatController::class, 'send'])->name('ai-chat.send');
+    Route::delete('/ai-chat/{id}',    [AiChatController::class, 'destroy'])->name('ai-chat.destroy');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -216,6 +236,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/notifications/{id}',         [App\Http\Controllers\Admin\AdminNotificationController::class, 'destroy'])->name('notifications.destroy');
     Route::post('/notifications/cleanup',        [App\Http\Controllers\Admin\AdminNotificationController::class, 'cleanup'])->name('notifications.cleanup');
     Route::get('/notifications/data',            [App\Http\Controllers\Admin\AdminNotificationController::class, 'data'])->name('notifications.data');
+
+    // Admin AI Chat management
+    Route::get('/ai-chat',                       [AdminController::class, 'aiConversations'])->name('ai-chat.index');
+    Route::get('/ai-chat/{id}',                  [AdminController::class, 'showAiConversation'])->name('ai-chat.show');
+    Route::delete('/ai-chat/{id}',               [AdminController::class, 'deleteAiConversation'])->name('ai-chat.destroy');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -227,12 +252,6 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
     Route::get('/applicants/{slug}', fn($slug) => view('applicants.view', [
         'listing'    => (object)['id'=>1,'title'=>'Demo','slug'=>$slug,'user'=>(object)['id'=>999,'name'=>'Demo'],'users'=>collect([])],
         'applicants' => new \Illuminate\Pagination\LengthAwarePaginator(collect([]), 0, 10),
-    ]));
-    Route::get('/messages',      fn() => view('messages.index',  ['conversations' => collect([])]));
-    Route::get('/messages/{id}', fn($id) => view('messages.show', [
-        'conversations' => collect([]),
-        'conversation'  => (object)['id'=>$id,'listing'=>null,'employee'=>null,'employer'=>null,'messages'=>collect([])],
-        'messages'      => collect([]),
     ]));
 });
 

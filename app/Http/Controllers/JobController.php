@@ -45,28 +45,169 @@ class JobController extends Controller
             })
             ->latest();
 
-        // Tìm kiếm
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', '%'.$request->search.'%')
-                  ->orWhere('description', 'like', '%'.$request->search.'%');
+        // ── 1. Keyword: tìm kiếm TOÀN DIỆN trên tất cả trường liên quan ──
+        $keyword = $request->filled('keyword') ? trim($request->keyword)
+                 : ($request->filled('search')  ? trim($request->search) : null);
+
+        if ($keyword) {
+            $kw = $keyword;
+
+            // Map từ khóa tiếng Việt phổ biến sang giá trị DB
+            $jobTypeMaps = [
+                'toàn thời gian' => 'Full-time',
+                'toan thoi gian' => 'Full-time',
+                'full time'      => 'Full-time',
+                'fulltime'       => 'Full-time',
+                'bán thời gian'  => 'Part-time',
+                'ban thoi gian'  => 'Part-time',
+                'part time'      => 'Part-time',
+                'parttime'       => 'Part-time',
+                'thực tập'       => 'Internship',
+                'thuc tap'       => 'Internship',
+                'intern'         => 'Internship',
+                'thực tập sinh'  => 'Internship',
+                'freelance'      => 'Freelance',
+                'tự do'          => 'Freelance',
+                'tu do'          => 'Freelance',
+                'remote'         => 'Remote',
+                'từ xa'          => 'Remote',
+                'tu xa'          => 'Remote',
+            ];
+
+            $workModeMaps = [
+                'văn phòng'  => 'onsite',
+                'van phong'  => 'onsite',
+                'onsite'     => 'onsite',
+                'tại chỗ'    => 'onsite',
+                'tai cho'    => 'onsite',
+                'hybrid'     => 'hybrid',
+                'kết hợp'    => 'hybrid',
+                'ket hop'    => 'hybrid',
+                'remote'     => 'remote',
+                'làm từ xa'  => 'remote',
+                'lam tu xa'  => 'remote',
+                'làm ở nhà'  => 'remote',
+                'lam o nha'  => 'remote',
+            ];
+
+            $levelMaps = [
+                'intern'        => 'intern',
+                'thực tập'      => 'intern',
+                'thuc tap'      => 'intern',
+                'fresher'       => 'fresher',
+                'mới ra trường' => 'fresher',
+                'moi ra truong' => 'fresher',
+                'junior'        => 'junior',
+                'trẻ'           => 'junior',
+                'tre'           => 'junior',
+                'middle'        => 'middle',
+                'mid'           => 'middle',
+                'senior'        => 'senior',
+                'cao cấp'       => 'senior',
+                'cao cap'       => 'senior',
+                'lead'          => 'lead',
+                'trưởng nhóm'   => 'lead',
+                'truong nhom'   => 'lead',
+                'manager'       => 'lead',
+                'quản lý'       => 'lead',
+                'quan ly'       => 'lead',
+            ];
+
+            // Tìm giá trị DB tương ứng từ keyword
+            $kwLower          = mb_strtolower($kw);
+            $mappedJobType    = $jobTypeMaps[$kwLower]  ?? null;
+            $mappedWorkMode   = $workModeMaps[$kwLower] ?? null;
+            $mappedLevel      = $levelMaps[$kwLower]    ?? null;
+
+            $query->where(function ($q) use ($kw, $mappedJobType, $mappedWorkMode, $mappedLevel) {
+                // Trường text trực tiếp trong listings
+                $q->where('title',       'like', '%' . $kw . '%')
+                  ->orWhere('description','like', '%' . $kw . '%')
+                  ->orWhere('requirements','like', '%' . $kw . '%')
+                  ->orWhere('benefits',    'like', '%' . $kw . '%')
+                  ->orWhere('address',    'like', '%' . $kw . '%')
+                  ->orWhere('job_type',   'like', '%' . $kw . '%')
+                  ->orWhere('work_mode',  'like', '%' . $kw . '%')
+                  ->orWhere('job_level',  'like', '%' . $kw . '%');
+
+                // Tìm theo tên công ty / tên nhà tuyển dụng (join users)
+                $q->orWhereHas('user', function ($uq) use ($kw) {
+                    $uq->where('company_name', 'like', '%' . $kw . '%')
+                       ->orWhere('name',        'like', '%' . $kw . '%');
+                });
+
+                // Map tiếng Việt → giá trị enum trong DB
+                if ($mappedJobType) {
+                    $q->orWhere('job_type', $mappedJobType);
+                }
+                if ($mappedWorkMode) {
+                    $q->orWhere('work_mode', $mappedWorkMode);
+                }
+                if ($mappedLevel) {
+                    $q->orWhere('job_level', $mappedLevel);
+                }
             });
         }
 
-        // Lọc địa điểm
+        // ── 2. Địa điểm ─────────────────────────────────────────────────
         if ($request->filled('address')) {
-            $query->where('address', 'like', '%'.$request->address.'%');
+            $query->where('address', 'like', '%' . $request->address . '%');
         }
 
-        // Lọc loại hình
+        // ── 3. Loại hình công việc ───────────────────────────────────────
         if ($request->filled('job_type')) {
             $query->where('job_type', $request->job_type);
         }
 
-        $listings = $query->paginate(12)->withQueryString();
-        $total    = $listings->total();
+        // ── 4. Work mode (onsite / remote / hybrid) ──────────────────────
+        if ($request->filled('work_mode')) {
+            $query->where('work_mode', $request->work_mode);
+        }
 
-        return view('job.index', compact('listings', 'total'));
+        // ── 5. Khoảng lương ─────────────────────────────────────────────
+        if ($request->filled('salary_range')) {
+            match ($request->salary_range) {
+                'Thỏa Thuận'    => $query->where('salary', 0),
+                'Dưới 5 triệu'  => $query->where('salary', '>', 0)->where('salary', '<', 5000000),
+                '5 - 10 triệu'  => $query->whereBetween('salary', [5000000, 10000000]),
+                '10 - 15 triệu' => $query->whereBetween('salary', [10000000, 15000000]),
+                'Trên 15 triệu' => $query->where('salary', '>', 15000000),
+                default         => null,
+            };
+        }
+
+        // ── 6. Kinh nghiệm (năm) ────────────────────────────────────────
+        if ($request->filled('exp_range')) {
+            match ($request->exp_range) {
+                'Chưa có KN'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', 0)),
+                'Dưới 1 năm'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '<=', 1)),
+                '1 - 3 năm'    => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '<=', 3))
+                                        ->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 1)),
+                '3 - 5 năm'    => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '<=', 5))
+                                        ->where(fn($q) => $q->whereNull('experience_years_max')->orWhere('experience_years_max', '>=', 3)),
+                'Trên 5 năm'   => $query->where(fn($q) => $q->whereNull('experience_years_min')->orWhere('experience_years_min', '>=', 5)),
+                default        => null,
+            };
+        }
+
+        // ── 7. Cấp độ công việc ─────────────────────────────────────────
+        if ($request->filled('job_level')) {
+            $query->where('job_level', $request->job_level);
+        }
+
+        // ── 8. Sắp xếp ──────────────────────────────────────────────────
+        $sort = $request->input('sort', 'newest');
+        match ($sort) {
+            'salary_desc'  => $query->orderByRaw('CASE WHEN salary = 0 THEN 1 ELSE 0 END ASC, salary DESC'),
+            'salary_asc'   => $query->orderByRaw('CASE WHEN salary = 0 THEN 1 ELSE 0 END ASC, salary ASC'),
+            'closing_soon' => $query->orderBy('application_close_date', 'asc'),
+            default        => $query->latest(),
+        };
+
+        $listings  = $query->paginate(12)->withQueryString();
+        $totalJobs = $listings->total();
+
+        return view('job.index', compact('listings', 'totalJobs'));
     }
 
     /**
@@ -151,12 +292,16 @@ class JobController extends Controller
                 'title'                 => $request->title,
                 'slug'                  => Str::slug($request->title) . '-' . Str::random(6),
                 'description'           => $request->description,
-                'roles'                 => $request->roles,
-                'predes'                => $request->predes,
+                'requirements'          => $request->requirements,
+                'benefits'              => $request->benefits,
                 'salary'                => $request->salary ?? 0,
                 'address'               => $request->address,
                 'job_type'              => $request->job_type,
                 'status'                => 'pending',
+                'work_mode'             => $request->work_mode ?? 'onsite',
+                'job_level'             => $request->job_level,
+                'experience_years_min'  => $request->experience_years_min,
+                'experience_years_max'  => $request->experience_years_max,
                 'application_close_date'=> $request->application_close_date,
             ]);
 
@@ -216,11 +361,15 @@ class JobController extends Controller
             $listing->update([
                 'title'                 => $request->title,
                 'description'           => $request->description,
-                'roles'                 => $request->roles,
-                'predes'                => $request->predes,
+                'requirements'          => $request->requirements,
+                'benefits'              => $request->benefits,
                 'salary'                => $request->salary ?? 0,
                 'address'               => $request->address,
                 'job_type'              => $request->job_type,
+                'work_mode'             => $request->work_mode ?? $listing->work_mode,
+                'job_level'             => $request->job_level ?? $listing->job_level,
+                'experience_years_min'  => $request->experience_years_min ?? $listing->experience_years_min,
+                'experience_years_max'  => $request->experience_years_max ?? $listing->experience_years_max,
                 'application_close_date'=> $request->application_close_date,
             ]);
 

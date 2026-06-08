@@ -2,17 +2,30 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\DB;
 
 class Listing extends Model
 {
+    use HasFactory;
+
     protected $guarded = [];
 
     protected $casts = [
         'application_close_date' => 'datetime',
     ];
+
+    /**
+     * Get the employer (user) that owns this listing.
+     */
+    public function employer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function user(): BelongsTo
     {
@@ -29,6 +42,32 @@ class Listing extends Model
         return $this->belongsToMany(User::class, 'listing_user')
                     ->withPivot(['shortlisted'])
                     ->withTimestamps();
+    }
+
+    /**
+     * Get the skills associated with this listing.
+     */
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'listing_skill');
+    }
+
+    /**
+     * Scope a query to only include active listings.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where(function ($q) {
+            $q->where(function ($q1) {
+                if (config('database.default') === 'sqlite') {
+                    $q1->where('status', 'open')
+                       ->whereDate('application_close_date', '>=', now()->toDateString());
+                } else {
+                    $q1->where('status', 'open')
+                       ->whereDate('application_close_date', '>=', DB::raw('CURDATE()'));
+                }
+            })->orWhere('status', 'active');
+        });
     }
 
     // ─── Free-tier Helpers ────────────────────────────────────────────────

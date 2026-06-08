@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'profile_reminder_sent_at',
         // OAuth
         'google_id', 'github_id',
+        'last_seen_at',
     ];
 
     protected $guarded = [];
@@ -48,6 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'notify_app_status'         => 'boolean',
             'notify_job_alert'          => 'boolean',
             'skills'                    => 'array',   // JSON cast
+            'last_seen_at'              => 'datetime',
         ];
     }
 
@@ -201,5 +203,17 @@ class User extends Authenticatable implements MustVerifyEmail
         $parts = explode(' ', trim($this->name ?? ''));
         if (count($parts) === 1) return strtoupper(mb_substr($parts[0], 0, 2));
         return strtoupper(mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1));
+    }
+
+    /** Check if the user is currently online. */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->greaterThanOrEqualTo(now()->subMinutes(5));
+    }
+
+    /** Get the AI conversations for the user. */
+    public function aiConversations(): HasMany
+    {
+        return $this->hasMany(AiConversation::class);
     }
 }

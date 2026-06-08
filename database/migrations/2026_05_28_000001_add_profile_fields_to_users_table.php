@@ -16,7 +16,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('user_type', 20)->default('employee');
+            if (!Schema::hasColumn('users', 'user_type')) {
+                $table->string('user_type', 20)->default('employee');
+            }
             $table->text('about')->nullable();
             $table->string('profile_pic', 255)->nullable();
             $table->string('resume', 255)->nullable();
@@ -27,10 +29,16 @@ return new class extends Migration
             $table->string('location', 255)->nullable();
 
             // Employer extended
-            $table->string('company_name', 255)->nullable();
-            $table->string('company_logo', 255)->nullable();
+            if (!Schema::hasColumn('users', 'company_name')) {
+                $table->string('company_name', 255)->nullable();
+            }
+            if (!Schema::hasColumn('users', 'company_logo')) {
+                $table->string('company_logo', 255)->nullable();
+            }
             $table->string('company_website', 255)->nullable();
-            $table->string('company_size', 20)->nullable();
+            if (!Schema::hasColumn('users', 'company_size')) {
+                $table->string('company_size', 20)->nullable();
+            }
 
             // Subscription
             $table->timestamp('user_trial')->nullable();
@@ -50,13 +58,21 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn([
+            $cols = [];
+            foreach ([
                 'user_type', 'about', 'profile_pic', 'resume',
                 'experience_years', 'desired_salary', 'location',
                 'company_name', 'company_logo', 'company_website', 'company_size',
                 'user_trial', 'plan', 'billing_ends',
                 'is_admin', 'is_banned', 'banned_at',
-            ]);
+            ] as $col) {
+                if (Schema::hasColumn('users', $col)) {
+                    $cols[] = $col;
+                }
+            }
+            if (!empty($cols)) {
+                $table->dropColumn($cols);
+            }
         });
     }
 };

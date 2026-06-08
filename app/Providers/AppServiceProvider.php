@@ -55,5 +55,10 @@ class AppServiceProvider extends ServiceProvider
                 \Illuminate\Support\Facades\Log::error("notifyPayment in-app failed: " . $e->getMessage());
             }
         });
+
+        // ── Gate ──────────────────────────────────────────────────────────
+        \Illuminate\Support\Facades\Gate::define('admin', function (User $user) {
+            return $user->user_type === 'admin';
+        });
     }
 }

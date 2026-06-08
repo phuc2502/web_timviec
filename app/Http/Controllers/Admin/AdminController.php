@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Listing;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\AiConversation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -434,5 +435,49 @@ class AdminController extends Controller
         $transactions = $query->latest()->paginate(10)->withQueryString();
 
         return view('admin.transactions', compact('transactions'));
+    }
+
+    /**
+     * GET /admin/ai-chat — Quản lý các cuộc trò chuyện với AI của toàn bộ hệ thống.
+     */
+    public function aiConversations(Request $request)
+    {
+        $query = AiConversation::query()->with('user');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($uq) use ($search) {
+                    $uq->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                })->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        $conversations = $query->latest('updated_at')->paginate(10)->withQueryString();
+
+        return view('admin.ai-chat.index', compact('conversations'));
+    }
+
+    /**
+     * GET /admin/ai-chat/{id} — Xem chi tiết cuộc trò chuyện AI (Auditor Mode).
+     */
+    public function showAiConversation($id)
+    {
+        $conversation = AiConversation::with('user')->findOrFail($id);
+        return view('admin.ai-chat.show', compact('conversation'));
+    }
+
+    /**
+     * DELETE /admin/ai-chat/{id} — Xóa cuộc trò chuyện AI.
+     */
+    public function deleteAiConversation($id)
+    {
+        $conversation = AiConversation::findOrFail($id);
+        $title = $conversation->title ?? 'Không có tiêu đề';
+        $userName = $conversation->user->name ?? 'Người dùng';
+        $conversation->delete();
+
+        return redirect()->route('admin.ai-chat.index')->with('success', "Đã xóa cuộc trò chuyện AI \"{$title}\" của người dùng {$userName}.");
     }
 }

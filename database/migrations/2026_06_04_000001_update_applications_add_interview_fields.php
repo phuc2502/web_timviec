@@ -8,25 +8,30 @@ return new class extends Migration {
     {
         Schema::table('applications', function (Blueprint $table) {
             // Thêm cột ngày giờ phỏng vấn (chỉ có khi status = interviewing)
-            $table->timestamp('interview_scheduled_at')->nullable()->after('status_updated_at');
-
-            // Đổi enum để thêm trạng thái 'approved' (Duyệt hồ sơ)
-            // MySQL: cần dùng raw SQL để modify enum
+            if (!Schema::hasColumn('applications', 'interview_scheduled_at')) {
+                $table->timestamp('interview_scheduled_at')->nullable()->after('status_updated_at');
+            }
         });
 
         // MySQL modify enum - add 'approved' status
-        \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM(
-            'submitted','viewed','approved','interviewing','rejected'
-        ) NOT NULL DEFAULT 'submitted'");
+        if (Schema::connection(null)->getConnection()->getDriverName() === 'mysql') {
+            \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM(
+                'submitted','viewed','approved','interviewing','rejected'
+            ) NOT NULL DEFAULT 'submitted'");
+        }
     }
 
     public function down(): void
     {
         Schema::table('applications', function (Blueprint $table) {
-            $table->dropColumn('interview_scheduled_at');
+            if (Schema::hasColumn('applications', 'interview_scheduled_at')) {
+                $table->dropColumn('interview_scheduled_at');
+            }
         });
-        \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM(
-            'submitted','viewed','interviewing','accepted','rejected'
-        ) NOT NULL DEFAULT 'submitted'");
+        if (Schema::connection(null)->getConnection()->getDriverName() === 'mysql') {
+            \DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM(
+                'submitted','viewed','interviewing','accepted','rejected'
+            ) NOT NULL DEFAULT 'submitted'");
+        }
     }
 };
