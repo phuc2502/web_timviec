@@ -67,12 +67,58 @@ class DashboardController extends Controller
             $hiddenJobs = Listing::where('status', 'hidden')->count();
             $closedJobs = Listing::where('status', 'closed')->count();
 
+            // ── Biểu đồ: Người dùng mới theo tháng (12 tháng gần đây) ───────
+            $usersByMonth = DB::table('users')
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
+
+            // ── Biểu đồ: Tin tuyển dụng mới theo tháng (12 tháng gần đây) ───
+            $jobsByMonth = DB::table('listings')
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
+
+            // ── Biểu đồ: Doanh thu theo tháng (12 tháng gần đây) ────────────
+            $revenueByMonth = DB::table('payments')
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(amount) as total')
+                ->where('status', 'success')
+                ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
+
+            // Tạo nhãn tháng đầy đủ 12 tháng (điền 0 nếu không có dữ liệu)
+            $chartLabels     = [];
+            $chartUsers      = [];
+            $chartJobs       = [];
+            $chartRevenue    = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $key = now()->subMonths($i)->format('Y-m');
+                $label = now()->subMonths($i)->translatedFormat('M/Y');
+                // fallback nếu không có locale
+                $label = now()->subMonths($i)->format('m/Y');
+                $chartLabels[]  = $label;
+                $chartUsers[]   = $usersByMonth[$key] ?? 0;
+                $chartJobs[]    = $jobsByMonth[$key] ?? 0;
+                $chartRevenue[] = (int)($revenueByMonth[$key] ?? 0);
+            }
+
+            // ── Biểu đồ tròn: phân loại gói dịch vụ ─────────────────────────
+            $freeUsers = User::where('plan', 'free')->orWhereNull('plan')->count();
+
             return view('admin.index', compact(
                 'totalUsers', 'totalJobs', 'totalApplications', 'totalRevenue',
                 'totalEmployees', 'totalEmployers', 'recentUsers',
                 'activeUsers', 'bannedUsers', 'premiumUsers', 'trialUsers',
                 'totalApplicationsCount', 'recentTransactions',
-                'openJobs', 'hiddenJobs', 'closedJobs'
+                'openJobs', 'hiddenJobs', 'closedJobs',
+                'chartLabels', 'chartUsers', 'chartJobs', 'chartRevenue',
+                'freeUsers'
             ));
         }
 
