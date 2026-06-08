@@ -66,7 +66,6 @@ Route::middleware('guest')->group(function () {
     // GitHub OAuth
     Route::get('/auth/github',          [App\Http\Controllers\Auth\GithubController::class, 'redirect'])->name('auth.github');
     Route::get('/auth/github/callback', [App\Http\Controllers\Auth\GithubController::class, 'callback'])->name('auth.github.callback');
-    Route::get('/auth/github/register/{role}', [App\Http\Controllers\Auth\GithubController::class, 'redirectWithRole'])->name('auth.github.register')->where('role', 'employee|employer');
 
     // Social OAuth — chọn role cho user mới
     Route::get('/auth/{provider}/choose-role', function (string $provider) {
@@ -102,6 +101,8 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/employee/dashboard', [DashboardController::class, 'index']);
+    Route::get('/employer/dashboard', [DashboardController::class, 'index']);
 });
 
 // Profile routes — yêu cầu đăng nhập VÀ đã xác minh email
@@ -124,7 +125,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/messages/interviews/{id}/respond', [MessageController::class, 'respondToInterview'])->name('messages.interview.respond');
     Route::get('/messages/quick-replies/list',       [MessageController::class, 'getQuickReplies'])->name('messages.quick_replies');
 
-    // AI Chat
+});
+
+// AI Chat — chỉ yêu cầu đăng nhập, không cần xác minh email
+Route::middleware(['auth'])->group(function () {
     Route::get('/ai-chat',            [AiChatController::class, 'index'])->name('ai-chat.index');
     Route::post('/ai-chat/new',       [AiChatController::class, 'create'])->name('ai-chat.create');
     Route::get('/ai-chat/{id}',       [AiChatController::class, 'show'])->name('ai-chat.show');
@@ -258,3 +262,13 @@ Route::middleware(\App\Http\Middleware\FakeAuth::class)->group(function () {
 // ─── VNPay IPN (server-to-server, không cần auth) ─────────────────────────
 Route::post('/payment/token/ipn',        [PaymentController::class, 'tokenIpn'])->name('payment.token.ipn');
 Route::post('/payment/subscription/ipn', [PaymentController::class, 'subscriptionIpn'])->name('payment.subscription.ipn');
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIX OAUTH REGISTER ROUTES (Đặt độc lập ở cuối file)
+// ═══════════════════════════════════════════════════════════════════════════
+
+Route::get('/auth/github/register/{role}', [App\Http\Controllers\Auth\GithubController::class, 'completeRegistration'])
+    ->name('auth.github.register')
+    ->where('role', 'employee|employer');
