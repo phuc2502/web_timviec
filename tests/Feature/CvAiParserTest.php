@@ -30,6 +30,7 @@ class CvAiParserTest extends TestCase
             $table->string('password');
             $table->string('user_type')->default('employee');
             $table->string('resume')->nullable();
+            $table->timestamp('last_seen_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

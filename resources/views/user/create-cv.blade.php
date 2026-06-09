@@ -18,6 +18,35 @@
     {{-- Cột trái: Form nhập liệu --}}
     <div class="flex-col gap-20">
       
+      {{-- AI Resume Parser Card --}}
+      <div class="card shadow-sm" style="border-radius: var(--radius-lg); border: 2px dashed #8b5cf6; background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);">
+        <div class="card-body" style="padding: 24px;">
+          <div class="flex" style="gap: 16px; align-items: flex-start;">
+            <div style="background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); flex-shrink: 0;">
+              <i class="fas fa-magic fa-lg"></i>
+            </div>
+            <div style="flex: 1;">
+              <h3 class="fw-700 fs-15" style="color:#6d28d9; margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+                Tự động điền nhanh CV bằng AI ✨ 
+                <span style="background: #ede9fe; color: #7c3aed; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;">Beta</span>
+              </h3>
+              <p class="text-muted fs-12" style="margin: 0 0 16px 0; line-height: 1.5;">
+                Bạn đã có CV sẵn? Tải lên file CV định dạng PDF, AI của chúng tôi sẽ tự động trích xuất thông tin học vấn, kinh nghiệm, dự án và điền vào form này giúp bạn tiết kiệm thời gian!
+              </p>
+              
+              <div id="ai-upload-area" style="border: 2px dashed #c084fc; border-radius: 10px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.2s ease;"
+                   onclick="document.getElementById('ai-cv-input').click()"
+                   ondragover="handleAiDragOver(event)" ondragleave="handleAiDragLeave(event)" ondrop="handleAiDrop(event)">
+                <input type="file" id="ai-cv-input" accept=".pdf" style="display: none;" onchange="handleAiFileSelect(event)">
+                <i class="fas fa-cloud-upload-alt fa-2x mb-10" style="color: #a78bfa; display: block; margin: 0 auto 8px;"></i>
+                <p class="fw-600 fs-13" style="color:#5b21b6; margin: 0 0 4px 0;">Chọn file hoặc kéo thả file PDF vào đây</p>
+                <p class="text-muted fs-11" style="margin: 0;">Định dạng PDF (tối đa 5MB)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {{-- 1. Thông tin cá nhân --}}
       <div class="card shadow-sm" style="border-radius: var(--radius-lg);">
         <div class="card-header" style="background: #f8fafc; border-bottom: 1px solid var(--border);">
@@ -753,6 +782,358 @@ document.addEventListener('DOMContentLoaded', function() {
   updateRemoveButtons(document.getElementById('certification-wrapper'));
   updateRemoveButtons(document.getElementById('language-wrapper'));
 });
+
+// ──────────────────────────────────────────────────────────────
+// AI CV PARSER JS LOGIC
+// ──────────────────────────────────────────────────────────────
+let aiAbortController = null;
+let parsedCvData = null;
+
+function handleAiDragOver(e) {
+  e.preventDefault();
+  document.getElementById('ai-upload-area').classList.add('dragover');
+}
+
+function handleAiDragLeave(e) {
+  e.preventDefault();
+  document.getElementById('ai-upload-area').classList.remove('dragover');
+}
+
+function handleAiDrop(e) {
+  e.preventDefault();
+  document.getElementById('ai-upload-area').classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    uploadAiCv(files[0]);
+  }
+}
+
+function handleAiFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) {
+    uploadAiCv(file);
+  }
+}
+
+function uploadAiCv(file) {
+  if (file.type !== 'application/pdf') {
+    alert('Hệ thống chỉ hỗ trợ file định dạng PDF.');
+    return;
+  }
+  
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Dung lượng file tối đa là 5MB.');
+    return;
+  }
+
+  aiAbortController = new AbortController();
+  const signal = aiAbortController.signal;
+
+  document.getElementById('ai-loading-modal').classList.add('active');
+
+  const formData = new FormData();
+  formData.append('cv_file', file);
+
+  fetch('{{ route('user.cv.ai-parse') }}', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+      'Accept': 'application/json'
+    },
+    signal: signal
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.json().then(err => { throw err; });
+    }
+    return response.json();
+  })
+  .then(res => {
+    document.getElementById('ai-loading-modal').classList.remove('active');
+    if (res.success && res.data) {
+      parsedCvData = res.data;
+      document.getElementById('ai-confirm-modal').classList.add('active');
+    } else {
+      alert(res.error || 'Không thể phân tích dữ liệu CV.');
+    }
+  })
+  .catch(err => {
+    document.getElementById('ai-loading-modal').classList.remove('active');
+    if (err.name === 'AbortError') {
+      console.log('Quá trình phân tích đã bị người dùng hủy.');
+    } else {
+      alert(err.error || err.message || 'Đã xảy ra lỗi trong quá trình xử lý.');
+    }
+  })
+  .finally(() => {
+    document.getElementById('ai-cv-input').value = '';
+  });
+}
+
+function abortAiParsing() {
+  if (aiAbortController) {
+    aiAbortController.abort();
+  }
+  document.getElementById('ai-loading-modal').classList.remove('active');
+}
+
+function closeConfirmModal() {
+  document.getElementById('ai-confirm-modal').classList.remove('active');
+  parsedCvData = null;
+}
+
+function applyParsedCvData() {
+  if (!parsedCvData) return;
+
+  const data = parsedCvData;
+
+  // 1. Điền các trường đơn giản
+  if (data.full_name) {
+    const input = document.querySelector('input[name="full_name"]');
+    if (input) input.value = data.full_name;
+  }
+  if (data.email) {
+    const input = document.querySelector('input[name="email"]');
+    if (input) input.value = data.email;
+  }
+  if (data.phone) {
+    const input = document.querySelector('input[name="phone"]');
+    if (input) input.value = data.phone;
+  }
+  if (data.address) {
+    const input = document.querySelector('input[name="address"]');
+    if (input) input.value = data.address;
+  }
+  if (data.objective) {
+    const textarea = document.querySelector('textarea[name="objective"]');
+    if (textarea) textarea.value = data.objective;
+  }
+  if (data.skills_text) {
+    const textarea = document.querySelector('textarea[name="skills_text"]');
+    if (textarea) textarea.value = data.skills_text;
+  }
+
+  // 2. Điền các repeater
+  // 2.1 Học vấn (education)
+  clearWrapper('education-wrapper');
+  if (data.education && data.education.length > 0) {
+    data.education.forEach(edu => {
+      cloneRow('education', 'education-wrapper', 'education-template');
+      const lastRow = document.getElementById('education-wrapper').lastElementChild;
+      
+      const schoolInput = lastRow.querySelector('input[name^="education["][name$="][school]"]');
+      const degreeInput = lastRow.querySelector('input[name^="education["][name$="][degree]"]');
+      const startInput = lastRow.querySelector('input[name^="education["][name$="][year_start]"]');
+      const endInput = lastRow.querySelector('input[name^="education["][name$="][year_end]"]');
+      
+      if (schoolInput) schoolInput.value = edu.school || '';
+      if (degreeInput) degreeInput.value = edu.degree || '';
+      if (startInput) startInput.value = edu.year_start || '';
+      if (endInput) endInput.value = edu.year_end || '';
+    });
+  } else {
+    cloneRow('education', 'education-wrapper', 'education-template');
+  }
+  updateRemoveButtons(document.getElementById('education-wrapper'));
+
+  // 2.2 Kinh nghiệm (experience)
+  clearWrapper('experience-wrapper');
+  if (data.experience && data.experience.length > 0) {
+    data.experience.forEach(exp => {
+      cloneRow('experience', 'experience-wrapper', 'experience-template');
+      const lastRow = document.getElementById('experience-wrapper').lastElementChild;
+      
+      const companyInput = lastRow.querySelector('input[name^="experience["][name$="][company]"]');
+      const roleInput = lastRow.querySelector('input[name^="experience["][name$="][role]"]');
+      const startInput = lastRow.querySelector('input[name^="experience["][name$="][year_start]"]');
+      const endInput = lastRow.querySelector('input[name^="experience["][name$="][year_end]"]');
+      const descText = lastRow.querySelector('textarea[name^="experience["][name$="][desc]"]');
+      
+      if (companyInput) companyInput.value = exp.company || '';
+      if (roleInput) roleInput.value = exp.role || '';
+      if (startInput) startInput.value = exp.year_start || '';
+      if (endInput) endInput.value = exp.year_end || '';
+      if (descText) descText.value = exp.desc || '';
+    });
+  } else {
+    cloneRow('experience', 'experience-wrapper', 'experience-template');
+  }
+  updateRemoveButtons(document.getElementById('experience-wrapper'));
+
+  // 2.3 Dự án (projects)
+  clearWrapper('project-wrapper');
+  if (data.projects && data.projects.length > 0) {
+    data.projects.forEach(proj => {
+      cloneRow('projects', 'project-wrapper', 'project-template');
+      const lastRow = document.getElementById('project-wrapper').lastElementChild;
+      
+      const nameInput = lastRow.querySelector('input[name^="projects["][name$="][name]"]');
+      const techInput = lastRow.querySelector('input[name^="projects["][name$="][tech]"]');
+      const urlInput = lastRow.querySelector('input[name^="projects["][name$="][url]"]');
+      const descText = lastRow.querySelector('textarea[name^="projects["][name$="][desc]"]');
+      
+      if (nameInput) nameInput.value = proj.name || '';
+      if (techInput) techInput.value = proj.tech || '';
+      if (urlInput) urlInput.value = proj.url || '';
+      if (descText) descText.value = proj.desc || '';
+    });
+  } else {
+    cloneRow('projects', 'project-wrapper', 'project-template');
+  }
+  updateRemoveButtons(document.getElementById('project-wrapper'));
+
+  // 2.4 Chứng chỉ (certifications)
+  clearWrapper('certification-wrapper');
+  if (data.certifications && data.certifications.length > 0) {
+    data.certifications.forEach(cert => {
+      cloneRow('certifications', 'certification-wrapper', 'certification-template');
+      const lastRow = document.getElementById('certification-wrapper').lastElementChild;
+      
+      const nameInput = lastRow.querySelector('input[name^="certifications["][name$="][name]"]');
+      const issuerInput = lastRow.querySelector('input[name^="certifications["][name$="][issuer]"]');
+      const yearInput = lastRow.querySelector('input[name^="certifications["][name$="][year]"]');
+      
+      if (nameInput) nameInput.value = cert.name || '';
+      if (issuerInput) issuerInput.value = cert.issuer || '';
+      if (yearInput) yearInput.value = cert.year || '';
+    });
+  } else {
+    cloneRow('certifications', 'certification-wrapper', 'certification-template');
+  }
+  updateRemoveButtons(document.getElementById('certification-wrapper'));
+
+  // 2.5 Ngoại ngữ (languages)
+  clearWrapper('language-wrapper');
+  if (data.languages && data.languages.length > 0) {
+    data.languages.forEach(lang => {
+      cloneRow('languages', 'language-wrapper', 'language-template');
+      const lastRow = document.getElementById('language-wrapper').lastElementChild;
+      
+      const langInput = lastRow.querySelector('input[name^="languages["][name$="][lang]"]');
+      const levelInput = lastRow.querySelector('input[name^="languages["][name$="][level]"]');
+      
+      if (langInput) langInput.value = lang.lang || '';
+      if (levelInput) levelInput.value = lang.level || '';
+    });
+  } else {
+    cloneRow('languages', 'language-wrapper', 'language-template');
+  }
+  updateRemoveButtons(document.getElementById('language-wrapper'));
+
+  closeConfirmModal();
+  alert('Đã tự động điền dữ liệu thành công! Vui lòng kiểm tra lại form.');
+}
+
+function clearWrapper(wrapperId) {
+  const wrapper = document.getElementById(wrapperId);
+  if (wrapper) {
+    wrapper.innerHTML = '';
+  }
+}
 </script>
 @endpush
+
+@push('styles')
+<style>
+#ai-upload-area:hover, #ai-upload-area.dragover {
+  background: #ede9fe !important;
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+}
+.ai-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.ai-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ai-modal-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 30px;
+  text-align: center;
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+}
+.ai-modal-overlay.active .ai-modal-card {
+  transform: scale(1);
+}
+.ai-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #ede9fe;
+  border-top: 4px solid #7c3aed;
+  border-radius: 50%;
+  animation: ai-spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+@keyframes ai-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.ai-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 0.2s;
+}
+.ai-btn-cancel:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+</style>
+@endpush
+
+{{-- Loading Modal --}}
+<div class="ai-modal-overlay" id="ai-loading-modal">
+  <div class="ai-modal-card">
+    <div class="ai-spinner"></div>
+    <h3 class="fw-700 fs-16 mb-10" style="color:var(--text-dark)">Đang phân tích CV của bạn...</h3>
+    <p class="text-muted fs-13 mb-20" style="line-height:1.5;">
+      Gemini AI đang trích xuất thông tin học vấn, kinh nghiệm làm việc và các thông tin khác từ file CV của bạn. Quá trình này có thể mất từ 10 - 20 giây.
+    </p>
+    <button type="button" class="ai-btn-cancel" onclick="abortAiParsing()">Hủy quá trình</button>
+  </div>
+</div>
+
+{{-- Confirmation Modal --}}
+<div class="ai-modal-overlay" id="ai-confirm-modal">
+  <div class="ai-modal-card" style="max-width: 450px;">
+    <div style="background: #e0f2fe; color: #0284c7; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+      <i class="fas fa-question-circle fa-2x"></i>
+    </div>
+    <h3 class="fw-700 fs-16 mb-10" style="color:var(--text-dark)">Xác nhận điền dữ liệu bằng AI</h3>
+    <p class="text-muted fs-13 mb-20" style="line-height:1.5;">
+      AI đã trích xuất thành công thông tin từ CV của bạn. Bạn có muốn tự động điền các thông tin này vào form?
+      <br>
+      <strong style="color:var(--danger)">Lưu ý:</strong> Hành động này sẽ thay thế (ghi đè) toàn bộ thông tin bạn đang nhập trên form hiện tại.
+    </p>
+    <div style="display:flex; justify-content:center; gap:10px;">
+      <button type="button" class="btn btn-outline" onclick="closeConfirmModal()">Hủy</button>
+      <button type="button" class="btn btn-primary" onclick="applyParsedCvData()" style="background:linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%); border:none; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2); color:white;">Đồng ý & Điền đè</button>
+    </div>
+  </div>
+</div>
 @endsection

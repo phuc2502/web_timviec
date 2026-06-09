@@ -18,6 +18,25 @@ return new class extends Migration
     public function up(): void
     {
         if (config('database.default') === 'mysql') {
+            // Map work_mode for remote/hybrid and set job_type to a valid default enum
+            DB::table('listings')->whereIn(DB::raw('LOWER(job_type)'), ['remote', 'hybrid'])->get()->each(function ($listing) {
+                $mode = strtolower($listing->job_type);
+                DB::table('listings')->where('id', $listing->id)->update([
+                    'work_mode' => $mode,
+                    'job_type' => 'full-time'
+                ]);
+            });
+
+            // Normalize other values to lowercase to match the new enum values
+            DB::table('listings')->where('job_type', 'Full-time')->update(['job_type' => 'full-time']);
+            DB::table('listings')->where('job_type', 'Part-time')->update(['job_type' => 'part-time']);
+            DB::table('listings')->where('job_type', 'Freelance')->update(['job_type' => 'freelance']);
+            DB::table('listings')->where('job_type', 'Internship')->update(['job_type' => 'internship']);
+
+            // Safely set any remaining unrecognized value to 'full-time' to avoid mysql truncation error
+            $validEnums = ['full-time', 'part-time', 'freelance', 'internship'];
+            DB::table('listings')->whereNotIn('job_type', $validEnums)->orWhereNull('job_type')->update(['job_type' => 'full-time']);
+
             DB::statement(
                 "ALTER TABLE listings MODIFY job_type ENUM('full-time','part-time','freelance','internship') NOT NULL DEFAULT 'full-time'"
             );
