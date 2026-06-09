@@ -19,8 +19,13 @@ class PaymentController extends Controller
     /**
      * GET /payment/token — Trang chọn gói mua lượt ứng tuyển.
      */
-    public function tokenPurchasePage()
+    public function tokenPurchasePage(\Illuminate\Http\Request $request)
     {
+        // Lưu listing_id vào session để redirect về form ứng tuyển sau khi mua xong
+        if ($request->filled('redirect_after_apply')) {
+            session(['redirect_after_apply' => (int) $request->query('redirect_after_apply')]);
+        }
+
         $packages = BuyTokenRequest::PACKAGES;
         return view('payment.token', compact('packages'));
     }
@@ -57,6 +62,14 @@ class PaymentController extends Controller
         $result = $this->service->handleTokenCallback($request->all());
 
         if ($result['success']) {
+            // Nếu user vào từ popup hết token ở trang chi tiết job, redirect về form ứng tuyển
+            if (session()->has('redirect_after_apply')) {
+                $listingId = session()->pull('redirect_after_apply');
+                return redirect()
+                    ->route('apply.form', ['listingId' => $listingId])
+                    ->with('success', $result['message'] . ' Bạn có thể ứng tuyển ngay bây giờ.');
+            }
+
             return redirect()
                 ->route('candidate.history')
                 ->with('success', $result['message']);

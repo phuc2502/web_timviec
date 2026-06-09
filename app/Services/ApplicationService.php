@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 
 class ApplicationService
 {
+    public function __construct(private NotificationService $notificationService) {}
     // ════════════════════════════════════════════════════════════════════════
     // PHÍA ỨNG VIÊN
     // ════════════════════════════════════════════════════════════════════════
@@ -137,6 +138,11 @@ public function apply(User $candidate, array $data): Application
 
             return $application;
         });
+
+        // ── 6. Gửi noti cho employer (sau transaction, tránh rollback) ────
+        $this->notificationService->notifyNewApplication($application);
+
+        return $application;
     }
     /**
      * Lấy CV từ lần ứng tuyển gần nhất trong toàn hệ thống (Global Last-Used CV).

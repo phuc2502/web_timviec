@@ -216,4 +216,16 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(AiConversation::class);
     }
+
+    /** Dùng template email tùy chỉnh khi đặt lại mật khẩu. */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
+
+    /** Dùng template email tùy chỉnh khi xác thực email. */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new \App\Notifications\VerifyEmailNotification());
+    }
 }

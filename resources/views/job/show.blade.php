@@ -120,9 +120,19 @@
                     @endif
                   </a>
                 @else
-                  <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-paper-plane fa-fw"></i> Ứng tuyển ngay
-                  </a>
+                  @php
+                    $tokenRecord = \App\Models\UserToken::where('user_id', auth()->id())->first();
+                    $hasToken    = $tokenRecord && $tokenRecord->hasBalance();
+                  @endphp
+                  @if($hasToken)
+                    <a href="{{ route('apply.form', ['listingId' => $listing->id]) }}" class="btn btn-primary btn-lg">
+                      <i class="fas fa-paper-plane fa-fw"></i> Ứng tuyển ngay
+                    </a>
+                  @else
+                    <button type="button" class="btn btn-primary btn-lg" onclick="showNoTokenPopup({{ $listing->id }})">
+                      <i class="fas fa-paper-plane fa-fw"></i> Ứng tuyển ngay
+                    </button>
+                  @endif
                 @endif
               @endif
             @else
@@ -223,8 +233,57 @@
   </div>
 </div>
 
+
+{{-- ===== POPUP HẾT LƯỢT ỨNG TUYỂN ===== --}}
+<div id="no-token-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
+  {{-- Overlay --}}
+  <div onclick="closeNoTokenPopup()" style="position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px)"></div>
+  {{-- Box --}}
+  <div style="position:relative;background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.18);text-align:center;z-index:1">
+    <div style="width:64px;height:64px;background:#FFF7E6;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <i class="fas fa-ticket-alt" style="font-size:28px;color:#F59E0B"></i>
+    </div>
+    <h2 style="font-size:20px;font-weight:800;color:var(--secondary);margin-bottom:8px">Bạn đã hết lượt ứng tuyển</h2>
+    <p style="font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:24px">
+      Mỗi lần nộp đơn tốn <strong>1 lượt</strong>. Mua thêm lượt để tiếp tục ứng tuyển vào vị trí này và các công việc khác.
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="closeNoTokenPopup()" class="btn btn-outline" style="min-width:110px">
+        Để sau
+      </button>
+      <button id="buy-token-btn" onclick="goToBuyToken()" class="btn btn-primary" style="min-width:140px">
+        <i class="fas fa-shopping-cart fa-fw"></i> Mua ngay
+      </button>
+    </div>
+  </div>
+</div>
+
 @push('scripts')
 <script>
+var _noTokenListingId = null;
+
+function showNoTokenPopup(listingId) {
+  _noTokenListingId = listingId;
+  var modal = document.getElementById('no-token-modal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeNoTokenPopup() {
+  document.getElementById('no-token-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function goToBuyToken() {
+  // Lưu listing_id qua URL param để sau khi mua xong redirect về form ứng tuyển
+  window.location.href = '{{ route("payment.token") }}?redirect_after_apply=' + _noTokenListingId;
+}
+
+// Đóng khi nhấn ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeNoTokenPopup();
+});
+
 function shareJob() {
   if (navigator.share) {
     navigator.share({ title: '{{ $listing->title }}', url: window.location.href });
