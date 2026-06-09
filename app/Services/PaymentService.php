@@ -68,9 +68,14 @@ class PaymentService
         }
 
         $txnRef  = $callbackData['vnp_TxnRef'] ?? '';
-        $payment = Payment::where('vnpay_txn_ref', $txnRef)
+
+        // Lock để tránh IPN + callback chạy song song → gửi 2 mail
+        $payment = DB::transaction(function () use ($txnRef) {
+            return Payment::where('vnpay_txn_ref', $txnRef)
                            ->where('type', 'token')
+                           ->lockForUpdate()
                            ->first();
+        });
 
         if (!$payment) {
             Log::error("VNPay Token callback: Không tìm thấy payment với txnRef={$txnRef}");
@@ -170,9 +175,14 @@ class PaymentService
         }
 
         $txnRef  = $callbackData['vnp_TxnRef'] ?? '';
-        $payment = Payment::where('vnpay_txn_ref', $txnRef)
+
+        // Lock để tránh IPN + callback chạy song song → gửi 2 mail
+        $payment = DB::transaction(function () use ($txnRef) {
+            return Payment::where('vnpay_txn_ref', $txnRef)
                            ->where('type', 'subscription')
+                           ->lockForUpdate()
                            ->first();
+        });
 
         if (!$payment) {
             Log::error("VNPay Subscription callback: Không tìm thấy payment txnRef={$txnRef}");
@@ -191,24 +201,33 @@ class PaymentService
             return ['success' => false, 'message' => 'Thanh toán thất bại hoặc bị huỷ.'];
         }
 
-        DB::transaction(function () use ($payment, $callbackData) {
-            $payment->update([
-                'status'         => 'success',
-                'vnpay_response' => $callbackData,
-            ]);
+        try {
+            DB::transaction(function () use ($payment, $callbackData) {
+                $payment->update([
+                    'status'         => 'success',
+                    'vnpay_response' => $callbackData,
+                ]);
 
-            $billingEnds = match ($payment->plan) {
-                'yearly'  => now()->addYear(),
-                default   => now()->addMonth(),
-            };
+                $billingEnds = match ($payment->plan) {
+                    'yearly'  => now()->addYear(),
+                    default   => now()->addMonth(),
+                };
 
-            Subscription::create([
-                'user_id'     => $payment->user_id,
-                'plan'        => $payment->plan,
-                'status'      => 'active',
-                'billing_ends' => $billingEnds,
+                Subscription::create([
+                    'user_id'      => $payment->user_id,
+                    'plan'         => $payment->plan,
+                    'status'       => 'active',
+                    'billing_ends' => $billingEnds,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Subscription DB error: ' . $e->getMessage(), [
+                'payment_id' => $payment->id,
+                'user_id'    => $payment->user_id,
+                'plan'       => $payment->plan,
             ]);
-        });
+            return ['success' => false, 'message' => 'Lỗi hệ thống khi lưu gói dịch vụ. Vui lòng liên hệ admin.'];
+        }
 
         PaymentSucceeded::dispatch($payment->fresh());
 
